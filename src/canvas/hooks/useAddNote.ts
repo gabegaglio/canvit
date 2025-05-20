@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { useCanvas } from "../../contexts/CanvasContext";
 
 interface UseAddNoteOptions {
   defaultPosition?: { x: number; y: number };
@@ -11,6 +12,7 @@ interface UseAddNoteReturn {
 
 export function useAddNote(options: UseAddNoteOptions = {}): UseAddNoteReturn {
   const { defaultPosition, onAddComplete } = options;
+  const { addNote: addNoteToCanvas } = useCanvas();
 
   const addNote = useCallback(
     (position?: { x: number; y: number }) => {
@@ -21,18 +23,21 @@ export function useAddNote(options: UseAddNoteOptions = {}): UseAddNoteReturn {
           y: window.innerHeight / 2,
         };
 
-      // Here we would add the note to the canvas
-      console.log("Adding note at position:", notePosition);
+      // Add the note to the canvas through the context
+      addNoteToCanvas({
+        x: notePosition.x,
+        y: notePosition.y,
+        content: "New Note",
+      });
 
-      // In a real implementation, this would create a new note
-      // example: dispatch(addNote({ position: notePosition }));
+      console.log("Added note at position:", notePosition);
 
       // Notify that add is complete if callback provided
       if (onAddComplete) {
         onAddComplete();
       }
     },
-    [defaultPosition, onAddComplete]
+    [addNoteToCanvas, defaultPosition, onAddComplete]
   );
 
   return { addNote };
