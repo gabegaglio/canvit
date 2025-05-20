@@ -1,10 +1,10 @@
 import { useEffect } from "react";
-import type { RefObject, MutableRefObject } from "react";
+import type { RefObject } from "react";
 
 export function useCanvasPanAndZoom(
   containerRef: RefObject<HTMLDivElement | null>,
-  isDragging: MutableRefObject<boolean>,
-  last: MutableRefObject<{ x: number; y: number }>,
+  isDragging: RefObject<boolean>,
+  last: RefObject<{ x: number; y: number }>,
   positionX: number,
   positionY: number,
   setPosition: (x: number, y: number) => void,

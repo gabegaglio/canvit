@@ -1,0 +1,54 @@
+import { useState } from "react";
+import { useAddNote } from "./useAddNote";
+
+interface CanvasPosition {
+  positionX: number;
+  positionY: number;
+  scale: number;
+}
+
+export function useCanvasHandlers(position: CanvasPosition) {
+  const { positionX, positionY, scale } = position;
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+
+  // Use the hook for adding notes
+  const { addNote } = useAddNote({
+    onAddComplete: () => setContextMenu(null),
+  });
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleAddNoteFromContextMenu = () => {
+    if (contextMenu) {
+      // Convert screen coordinates to canvas coordinates
+      const canvasX = (contextMenu.x - positionX) / scale;
+      const canvasY = (contextMenu.y - positionY) / scale;
+      addNote({ x: canvasX, y: canvasY });
+    }
+  };
+
+  const handleAddNoteFromToolbar = () => {
+    // Center of the visible canvas
+    const canvasX = (window.innerWidth / 2 - positionX) / scale;
+    const canvasY = (window.innerHeight / 2 - positionY) / scale;
+    addNote({ x: canvasX, y: canvasY });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  return {
+    contextMenu,
+    handleContextMenu,
+    handleAddNoteFromContextMenu,
+    handleAddNoteFromToolbar,
+    handleCloseContextMenu,
+  };
+}
