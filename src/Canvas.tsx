@@ -1,7 +1,6 @@
 import React, { useRef } from "react";
 import { CanvasProvider, useCanvas } from "./contexts/CanvasContext";
 import canvitLogo from "./assets/canvit.svg";
-import HomeButton from "./canvas/components/ToolBarButtons/HomeButton";
 import Toolbar from "./canvas/components/Toolbar";
 import { useCanvasPanAndZoom } from "./canvas/hooks/useCanvasPanAndZoom";
 import CanvasContextMenu from "./canvas/menus/CanvasContextmenu";

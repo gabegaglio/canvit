@@ -27,6 +27,7 @@ export function useCanvasHandlers(position: CanvasPosition) {
   const handleAddNoteFromContextMenu = () => {
     if (contextMenu) {
       // Convert screen coordinates to canvas coordinates
+      // The formula accounts for canvas position and scale
       const canvasX = (contextMenu.x - positionX) / scale;
       const canvasY = (contextMenu.y - positionY) / scale;
       addNote({ x: canvasX, y: canvasY });
@@ -34,9 +35,14 @@ export function useCanvasHandlers(position: CanvasPosition) {
   };
 
   const handleAddNoteFromToolbar = () => {
-    // Center of the visible canvas
-    const canvasX = (window.innerWidth / 2 - positionX) / scale;
-    const canvasY = (window.innerHeight / 2 - positionY) / scale;
+    // Calculate the center of the visible canvas area
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Convert center of viewport to canvas coordinates
+    const canvasX = (viewportWidth / 2 - positionX) / scale;
+    const canvasY = (viewportHeight / 2 - positionY) / scale;
+
     addNote({ x: canvasX, y: canvasY });
   };
 

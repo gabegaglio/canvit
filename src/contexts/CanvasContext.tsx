@@ -1,45 +1,93 @@
-import { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
+
+interface Note {
+  id: string;
+  x: number;
+  y: number;
+  content: string;
+}
 
 interface CanvasContextType {
   scale: number;
+  setScale: (scale: number) => void;
   positionX: number;
   positionY: number;
-  setScale: (s: number) => void;
   setPosition: (x: number, y: number) => void;
+  notes: Note[];
+  addNote: (note: Omit<Note, "id">) => void;
+  updateNote: (id: string, content: string) => void;
+  updateNotePosition: (id: string, x: number, y: number) => void;
+  deleteNote: (id: string) => void;
 }
 
-const CanvasContext = createContext<CanvasContextType | undefined>(undefined);
+const CanvasContext = createContext<CanvasContextType | null>(null);
 
 const CANVAS_SIZE = 100000;
-const getInitialPosition = () => ({
-  x: window.innerWidth / 2 - CANVAS_SIZE / 2,
-  y: window.innerHeight / 2 - CANVAS_SIZE / 2,
-});
 
-export function CanvasProvider({ children }: { children: ReactNode }) {
+export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [scale, setScale] = useState(1);
-  const [position, setPositionState] = useState(getInitialPosition());
+  const [positionX, setPositionX] = useState(0);
+  const [positionY, setPositionY] = useState(0);
+  const [notes, setNotes] = useState<Note[]>([]);
 
-  const setPosition = (x: number, y: number) => setPositionState({ x, y });
+  useEffect(() => {
+    setPositionX(window.innerWidth / 2 - CANVAS_SIZE / 2);
+    setPositionY(window.innerHeight / 2 - CANVAS_SIZE / 2);
+  }, []);
+
+  const setPosition = (x: number, y: number) => {
+    setPositionX(x);
+    setPositionY(y);
+  };
+
+  const addNote = (note: Omit<Note, "id">) => {
+    const id = Date.now().toString();
+    setNotes((prevNotes) => [...prevNotes, { ...note, id }]);
+  };
+
+  const updateNote = (id: string, content: string) => {
+    setNotes((prevNotes) =>
+      prevNotes.map((note) => (note.id === id ? { ...note, content } : note))
+    );
+  };
+
+  const updateNotePosition = (id: string, x: number, y: number) => {
+    setNotes((prevNotes) =>
+      prevNotes.map((note) => (note.id === id ? { ...note, x, y } : note))
+    );
+  };
+
+  const deleteNote = (id: string) => {
+    setNotes((prevNotes) => prevNotes.filter((note) => note.id !== id));
+  };
 
   return (
     <CanvasContext.Provider
       value={{
         scale,
-        positionX: position.x,
-        positionY: position.y,
         setScale,
+        positionX,
+        positionY,
         setPosition,
+        notes,
+        addNote,
+        updateNote,
+        updateNotePosition,
+        deleteNote,
       }}
     >
       {children}
     </CanvasContext.Provider>
   );
-}
+};
 
-export function useCanvas() {
-  const ctx = useContext(CanvasContext);
-  if (!ctx) throw new Error("useCanvas must be used within a CanvasProvider");
-  return ctx;
-}
+export const useCanvas = () => {
+  const context = useContext(CanvasContext);
+  if (!context) {
+    throw new Error("useCanvas must be used within a CanvasProvider");
+  }
+  return context;
+};
