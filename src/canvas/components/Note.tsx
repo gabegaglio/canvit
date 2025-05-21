@@ -1,13 +1,20 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
+import { useNoteResize } from "../hooks/useNoteResize";
+import type { ResizeHandle } from "../hooks/useNoteResize";
+import { useElementPosition } from "../../utils/dragUtils";
 import { useDrag } from "@use-gesture/react";
 
 interface NoteProps {
   id?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
   onDragEnd?: (id: string, x: number, y: number) => void;
+  onResize?: (id: string, width: number, height: number) => void;
   scale?: number; // Canvas scale factor
+  width?: number;
+  height?: number;
+  content?: string;
 }
 
 const Note: React.FC<NoteProps> = ({
@@ -16,43 +23,74 @@ const Note: React.FC<NoteProps> = ({
   className,
   style,
   onDragEnd,
+  onResize,
   scale = 1,
+  width: propWidth,
+  height: propHeight,
+  content = "",
 }) => {
   const noteRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = React.useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isHoveringHandle, setIsHoveringHandle] = useState<ResizeHandle | null>(
+    null
+  );
 
-  // Track the initial position and current offset
-  const initialPosition = useRef({ x: 0, y: 0 });
+  // Initialize resize hook
+  const {
+    dimensions,
+    position,
+    isResizing,
+    updateDimensions,
+    updatePosition,
+    bindResize,
+    getResizeCursor,
+  } = useNoteResize({
+    id,
+    scale,
+    initialWidth: propWidth || 200,
+    initialHeight: propHeight || 150,
+    initialX: (style?.left as number) || 0,
+    initialY: (style?.top as number) || 0,
+    onResize,
+    onPositionChange: onDragEnd,
+    content, // Pass content to calculate minimum width
+  });
 
-  // Track if currently dragging
-  const [isDragging, setIsDragging] = React.useState(false);
+  // Use utility hook for position and dimension updates
+  useElementPosition(
+    propWidth,
+    propHeight,
+    updateDimensions,
+    style,
+    position,
+    updatePosition
+  );
 
-  // Set up the drag gesture
-  const bind = useDrag(
+  // Set up the drag gesture for moving the note - disabled when resizing
+  const bindDrag = useDrag(
     ({ movement: [mx, my], first, last, memo }) => {
+      // Don't drag if we're resizing or hovering over a resize handle
+      if (isResizing || isHoveringHandle) return;
+
       if (first) {
-        // Store initial position
-        initialPosition.current = {
-          x: (style?.left as number) || 0,
-          y: (style?.top as number) || 0,
-        };
         setIsDragging(true);
-        // Return initial position as memo for access in subsequent callbacks
-        return initialPosition.current;
+        return {
+          initialX: position.x,
+          initialY: position.y,
+        };
       }
 
-      // Adjust movement based on canvas scale to ensure 1:1 movement
+      // Adjust movement based on canvas scale
       const adjustedMx = mx / scale;
       const adjustedMy = my / scale;
 
-      // Calculate new position using the memo (initial position)
-      const x = memo.x + adjustedMx;
-      const y = memo.y + adjustedMy;
+      // Calculate new position
+      const x = memo.initialX + adjustedMx;
+      const y = memo.initialY + adjustedMy;
 
-      // Update the position
-      setPosition({ x, y });
+      // Update position
+      updatePosition(x, y);
 
-      // When drag ends, notify parent
       if (last) {
         setIsDragging(false);
         if (id && onDragEnd) {
@@ -60,45 +98,78 @@ const Note: React.FC<NoteProps> = ({
         }
       }
 
-      // Return initial position for continued use in this drag gesture
       return memo;
     },
     {
-      // Prevent drag from moving the entire canvas
       preventDefault: true,
-      // Style cursor during drag
       filterTaps: true,
     }
   );
 
-  // Combine passed-in style with position
-  const combinedStyle = {
-    ...style,
-    left: position.x || style?.left,
-    top: position.y || style?.top,
-    cursor: isDragging ? "grabbing" : "grab",
-    userSelect: "none" as const, // Prevent text selection during drag
-    touchAction: "none" as const, // Prevent scrolling on touch devices
+  // Wrapper for resize bindings to track handle hover state
+  const createHandleProps = (handle: ResizeHandle) => {
+    const resizeBindings = bindResize(handle);
+
+    return {
+      ...resizeBindings(),
+      onMouseEnter: () => setIsHoveringHandle(handle),
+      onMouseLeave: () => setIsHoveringHandle(null),
+    };
   };
 
-  React.useEffect(() => {
-    // Set initial position from props
-    if (style?.left && style?.top && !position.x && !position.y) {
-      setPosition({
-        x: style.left as number,
-        y: style.top as number,
-      });
-    }
-  }, [style?.left, style?.top, position.x, position.y]);
+  // Determine cursor based on interaction state
+  const getCursor = () => {
+    if (isResizing) return getResizeCursor() || "grab";
+    if (isHoveringHandle) return "nwse-resize";
+    if (isDragging) return "grabbing";
+    return "grab";
+  };
+
+  // Combined style
+  const combinedStyle = {
+    ...style,
+    left: position.x,
+    top: position.y,
+    width: dimensions.width,
+    height: dimensions.height,
+    cursor: getCursor(),
+    userSelect: "none" as const,
+    touchAction: "none" as const,
+    position: "absolute" as const,
+  };
+
+  // Check if content is empty
+  const isEmpty = !content || content.trim() === "";
 
   return (
     <div
       ref={noteRef}
-      className={`bg-white bg-opacity-20 backdrop-blur-md rounded-lg shadow-lg p-4 text-black border border-white border-opacity-30 ${className}`}
+      className={`bg-white-900 backdrop-blur-lg rounded-lg shadow-lg relative ${className}`}
       style={combinedStyle}
-      {...bind()}
+      {...bindDrag()}
     >
-      {children}
+      {/* Inner content container with padding */}
+      <div className="p-4 w-full h-full overflow-hidden text-black">
+        {isEmpty ? (
+          <div className="text-gray-500 italic">Add an idea</div>
+        ) : (
+          <div className="text-black break-words">{content}</div>
+        )}
+      </div>
+
+      {/* Single resize handle in the bottom right corner */}
+      <div
+        className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize z-10"
+        {...createHandleProps("bottomRight")}
+      >
+        <svg
+          className="w-full h-full text-black opacity-50"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M22,22H20V20H22V22M22,18H20V16H22V18M18,22H16V20H18V22M18,18H16V16H18V18M14,22H12V20H14V22M22,14H20V12H22V14Z" />
+        </svg>
+      </div>
     </div>
   );
 };
