@@ -5,6 +5,8 @@ interface Note {
   id: string;
   x: number;
   y: number;
+  width: number;
+  height: number;
   content: string;
 }
 
@@ -19,6 +21,7 @@ interface CanvasContextType {
   updateNote: (id: string, content: string) => void;
   updateNotePosition: (id: string, x: number, y: number) => void;
   deleteNote: (id: string) => void;
+  updateNoteDimensions: (id: string, width: number, height: number) => void;
 }
 
 const CanvasContext = createContext<CanvasContextType | null>(null);
@@ -45,7 +48,12 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const addNote = (note: Omit<Note, "id">) => {
     const id = Date.now().toString();
-    setNotes((prevNotes) => [...prevNotes, { ...note, id }]);
+    const noteWithDefaults = {
+      ...note,
+      width: note.width || 200,
+      height: note.height || 150,
+    };
+    setNotes((prevNotes) => [...prevNotes, { ...noteWithDefaults, id }]);
   };
 
   const updateNote = (id: string, content: string) => {
@@ -64,6 +72,14 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({
     setNotes((prevNotes) => prevNotes.filter((note) => note.id !== id));
   };
 
+  const updateNoteDimensions = (id: string, width: number, height: number) => {
+    setNotes((prevNotes) =>
+      prevNotes.map((note) =>
+        note.id === id ? { ...note, width, height } : note
+      )
+    );
+  };
+
   return (
     <CanvasContext.Provider
       value={{
@@ -77,6 +93,7 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({
         updateNote,
         updateNotePosition,
         deleteNote,
+        updateNoteDimensions,
       }}
     >
       {children}

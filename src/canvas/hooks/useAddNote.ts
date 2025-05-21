@@ -1,5 +1,6 @@
-import { useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useCanvas } from "../../contexts/CanvasContext";
+import { getRandomIdea } from "../../utils/ideaBank";
 
 interface UseAddNoteOptions {
   defaultPosition?: { x: number; y: number };
@@ -7,38 +8,81 @@ interface UseAddNoteOptions {
 }
 
 interface UseAddNoteReturn {
-  addNote: (position?: { x: number; y: number }) => void;
+  isAddingNote: boolean;
+  toggleAddNote: () => void;
+  setAddNotePosition: (x: number, y: number) => void;
+  addNoteToCanvas: (note: {
+    x: number;
+    y: number;
+    content?: string;
+    width?: number;
+    height?: number;
+  }) => void;
+  handleAddNote: () => void;
 }
 
 export function useAddNote(options: UseAddNoteOptions = {}): UseAddNoteReturn {
-  const { defaultPosition, onAddComplete } = options;
-  const { addNote: addNoteToCanvas } = useCanvas();
+  const { onAddComplete } = options;
+  const { addNote } = useCanvas();
+  const [isAddingNote, setIsAddingNote] = useState(false);
 
-  const addNote = useCallback(
-    (position?: { x: number; y: number }) => {
-      // Use provided position or default position or center of the screen
-      const notePosition = position ||
-        defaultPosition || {
-          x: window.innerWidth / 2,
-          y: window.innerHeight / 2,
-        };
+  // Position where to add the note
+  const [notePosition, setNotePosition] = useState({ x: 0, y: 0 });
 
-      // Add the note to the canvas through the context
-      addNoteToCanvas({
-        x: notePosition.x,
-        y: notePosition.y,
-        content: "New Note",
+  // Toggle add note mode
+  const toggleAddNote = useCallback(() => {
+    setIsAddingNote((prev) => !prev);
+  }, []);
+
+  // Set position before adding note
+  const setAddNotePosition = useCallback((x: number, y: number) => {
+    setNotePosition({ x, y });
+  }, []);
+
+  // Add note to canvas at the specified position
+  const addNoteToCanvas = useCallback(
+    (note: {
+      x: number;
+      y: number;
+      content?: string;
+      width?: number;
+      height?: number;
+    }) => {
+      // Use provided content or generate random idea - ensure randomness each time
+      const content =
+        note.content !== undefined ? note.content : getRandomIdea();
+
+      addNote({
+        x: note.x,
+        y: note.y,
+        content,
+        width: note.width || 200,
+        height: note.height || 150,
       });
 
-      console.log("Added note at position:", notePosition);
-
-      // Notify that add is complete if callback provided
+      setIsAddingNote(false);
       if (onAddComplete) {
         onAddComplete();
       }
     },
-    [addNoteToCanvas, defaultPosition, onAddComplete]
+    [addNote, onAddComplete]
   );
 
-  return { addNote };
+  // Handle canvas click to add note
+  const handleAddNote = useCallback(() => {
+    if (isAddingNote) {
+      addNoteToCanvas({
+        x: notePosition.x,
+        y: notePosition.y,
+      });
+    }
+  }, [isAddingNote, notePosition.x, notePosition.y, addNoteToCanvas]);
+
+  return {
+    isAddingNote,
+    toggleAddNote,
+    setAddNotePosition,
+    addNoteToCanvas,
+    handleAddNote,
+  };
 }

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import Note from "./Note";
 import { useCanvas } from "../../contexts/CanvasContext";
 
@@ -19,13 +19,24 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
   boxSize,
   logoSrc,
 }) => {
-  const { notes, updateNotePosition } = useCanvas();
+  const { notes, updateNotePosition, updateNoteDimensions, updateNote } =
+    useCanvas();
 
-  // Handle note drag end
-  const handleNoteDragEnd = (id: string, x: number, y: number) => {
-    console.log(`Note ${id} moved to ${x}, ${y}`);
-    updateNotePosition(id, x, y);
-  };
+  // Handle note drag end - memoized to avoid unnecessary recreations
+  const handleNoteDragEnd = useCallback(
+    (id: string, x: number, y: number) => {
+      updateNotePosition(id, x, y);
+    },
+    [updateNotePosition]
+  );
+
+  // Handle note resize - memoized for better performance
+  const handleNoteResize = useCallback(
+    (id: string, width: number, height: number) => {
+      updateNoteDimensions(id, width, height);
+    },
+    [updateNoteDimensions]
+  );
 
   return (
     <div
@@ -66,17 +77,19 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
             left: note.x,
             top: note.y,
             zIndex: 5,
-            minWidth: "200px",
-            minHeight: "150px",
           }}
+          width={note.width}
+          height={note.height}
           onDragEnd={handleNoteDragEnd}
+          onResize={handleNoteResize}
           scale={scale}
+          content={note.content}
         >
-          <div className="min-h-full">{note.content}</div>
+          {note.content}
         </Note>
       ))}
     </div>
   );
 };
 
-export default CanvasContent;
+export default React.memo(CanvasContent);
