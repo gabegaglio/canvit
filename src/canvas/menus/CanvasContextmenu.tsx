@@ -9,6 +9,8 @@ interface CanvasContextMenuProps {
   y: number;
   onClose: () => void;
   onAddNote: () => void;
+  isGridActive: boolean;
+  onToggleGrid: (active: boolean) => void;
 }
 
 const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
@@ -16,6 +18,8 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
   y,
   onClose,
   onAddNote,
+  isGridActive,
+  onToggleGrid,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const { setPosition, setScale } = useCanvas();
@@ -27,6 +31,12 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
       window.innerHeight / 2 - CANVAS_SIZE / 2
     );
     setScale(1);
+    onClose();
+  };
+
+  // Toggle grid and close menu
+  const handleToggleGrid = () => {
+    onToggleGrid(!isGridActive);
     onClose();
   };
 
@@ -65,6 +75,16 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
       >
         <span className="relative">
           Go to Origin
+          <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-black group-hover:w-full transition-all duration-300 ease-in-out"></span>
+        </span>
+      </button>
+
+      <button
+        className="block w-full text-left px-3 py-1.5 rounded text-black font-medium transition-all duration-200 hover:scale-105 cursor-pointer relative group"
+        onClick={handleToggleGrid}
+      >
+        <span className="relative">
+          {isGridActive ? "Hide Grid" : "Show Grid"}
           <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-black group-hover:w-full transition-all duration-300 ease-in-out"></span>
         </span>
       </button>
