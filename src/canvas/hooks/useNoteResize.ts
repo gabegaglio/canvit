@@ -63,37 +63,42 @@ export function useNoteResize({
   // Starting values for the current resize operation
   const startDimensions = useRef({ width: 0, height: 0 });
   // Track the latest dimensions for smooth updates
-  const latestDimensions = useRef({ width: initialWidth, height: initialHeight });
+  const latestDimensions = useRef({
+    width: initialWidth,
+    height: initialHeight,
+  });
 
   // Calculate the minimum width based on content - only for long words
   const calculateMinWidth = () => {
     if (!content) return MIN_SIZE;
-    
+
     // Find the longest word in the content
     const words = content.split(/\s+/);
-    const longestWord = words.reduce((longest, word) => 
-      word.length > longest.length ? word : longest, "");
-      
+    const longestWord = words.reduce(
+      (longest, word) => (word.length > longest.length ? word : longest),
+      ""
+    );
+
     // Only apply special minimum width for long words (more than 8 chars)
     if (longestWord.length <= 8) return MIN_SIZE;
-    
+
     // Calculate minimum width based on longest word length
     const wordBasedMinWidth = Math.max(
       MIN_SIZE,
       longestWord.length * MIN_WIDTH_PER_CHAR + 24 // Add minimal padding
     );
-    
+
     return wordBasedMinWidth;
   };
 
   const updateDimensions = (width: number, height: number) => {
     // Calculate minimum width based on content
     const minWidth = calculateMinWidth();
-    
+
     // Apply minimum constraints
     const newWidth = Math.max(width, minWidth);
     const newHeight = Math.max(height, MIN_SIZE);
-    
+
     // Update state
     setDimensions({ width: newWidth, height: newHeight });
     latestDimensions.current = { width: newWidth, height: newHeight };
@@ -104,7 +109,7 @@ export function useNoteResize({
   };
 
   const bindResize = (
-    handle: ResizeHandle, 
+    handle: ResizeHandle,
     resizeCallback?: (
       dimensions: { width: number; height: number },
       position: { x: number; y: number }
@@ -130,25 +135,34 @@ export function useNoteResize({
 
         // Calculate new dimensions (only grows from bottom-right)
         const minWidth = calculateMinWidth();
-        const newWidth = Math.max(minWidth, startDimensions.current.width + adjustedMx);
-        const newHeight = Math.max(MIN_SIZE, startDimensions.current.height + adjustedMy);
+        const newWidth = Math.max(
+          minWidth,
+          startDimensions.current.width + adjustedMx
+        );
+        const newHeight = Math.max(
+          MIN_SIZE,
+          startDimensions.current.height + adjustedMy
+        );
 
         // Get grid snapping data if callback provided
         let finalWidth = newWidth;
         let finalHeight = newHeight;
         let finalX = position.x;
         let finalY = position.y;
-        
+
         if (resizeCallback) {
-          const callbackData = resizeCallback({ width: newWidth, height: newHeight }, { x: position.x, y: position.y });
-          
+          const callbackData = resizeCallback(
+            { width: newWidth, height: newHeight },
+            { x: position.x, y: position.y }
+          );
+
           if (callbackData) {
             // During drag, show actual position for smooth movement
             finalWidth = callbackData.width;
             finalHeight = callbackData.height;
             finalX = callbackData.x;
             finalY = callbackData.y;
-            
+
             // On last event, apply snapping if needed
             if (last && callbackData.shouldSnap) {
               finalWidth = callbackData.snapWidth ?? finalWidth;
@@ -162,8 +176,8 @@ export function useNoteResize({
         // Update state with smooth visual feedback
         setDimensions({ width: finalWidth, height: finalHeight });
         latestDimensions.current = { width: finalWidth, height: finalHeight };
-        
-        // Update position if changed 
+
+        // Update position if changed
         if (finalX !== position.x || finalY !== position.y) {
           setPosition({ x: finalX, y: finalY });
         }

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useCanvas } from "../../contexts/CanvasContext";
-import { NOTE_COLORS } from "../constants/noteColors";
 import type { NoteColorOption } from "../constants/noteColors";
+import { SliderPicker } from "react-color";
+import type { ColorResult } from "react-color";
 
 // Logo blue color
 const LOGO_BLUE = "#00AEEF";
@@ -22,28 +23,49 @@ const NoteContextMenu: React.FC<NoteContextMenuProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const { deleteNote, updateNoteColor, updateNoteImage } = useCanvas();
+  const [selectedColor, setSelectedColor] = useState("#ffffff");
+  const { deleteNote, updateNoteColor, updateNoteImage, notes } = useCanvas();
+
+  // Initialize selected color from the note's current color
+  useEffect(() => {
+    const note = notes.find((note) => note.id === noteId);
+    if (note && note.color) {
+      setSelectedColor(note.color);
+    }
+  }, [noteId, notes]);
+
+  console.log("NoteContextMenu rendered", { x, y, noteId });
 
   // Handle deleting the note
   const handleDelete = () => {
+    console.log("Deleting note", noteId);
     deleteNote(noteId);
     onClose();
   };
 
   // Handle showing color picker
   const handleShowColorPicker = () => {
+    console.log("Showing color picker");
     setShowColorPicker(true);
   };
 
-  // Handle selecting a color
-  const handleSelectColor = (color: NoteColorOption) => {
-    updateNoteColor(noteId, color.value);
-    setShowColorPicker(false);
-    onClose();
+  // Handle color change from SliderPicker - update immediately on any change
+  const handleColorChange = (color: ColorResult) => {
+    console.log("Color changing:", color.hex);
+    const newColor = color.hex;
+    setSelectedColor(newColor);
+    updateNoteColor(noteId, newColor);
+  };
+
+  // Handle preset color selection - update immediately
+  const handlePresetColorClick = (color: string) => {
+    setSelectedColor(color);
+    updateNoteColor(noteId, color);
   };
 
   // Handle image upload click
   const handleImageClick = () => {
+    console.log("Clicked image upload");
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
@@ -65,6 +87,7 @@ const NoteContextMenu: React.FC<NoteContextMenuProps> = ({
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target && typeof event.target.result === "string") {
+          console.log("Uploading image for note", noteId);
           updateNoteImage(noteId, event.target.result);
           onClose();
         }
@@ -77,12 +100,15 @@ const NoteContextMenu: React.FC<NoteContextMenuProps> = ({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        console.log("Clicked outside note context menu");
         onClose();
       }
     };
 
+    console.log("Adding click outside listener for note context menu");
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
+      console.log("Removing click outside listener for note context menu");
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [onClose]);
@@ -90,8 +116,13 @@ const NoteContextMenu: React.FC<NoteContextMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="absolute bg-white bg-opacity-20 backdrop-blur-md shadow-lg rounded-lg p-1.5 border border-white border-opacity-30 text-sm z-50"
-      style={{ left: x, top: y, zIndex: 1000 }}
+      className="absolute bg-white bg-opacity-80 backdrop-blur-md shadow-xl rounded-lg p-1.5 border border-gray-300 text-sm z-[9999]"
+      style={{
+        left: x,
+        top: y,
+        zIndex: 10000,
+        minWidth: "220px",
+      }}
     >
       {!showColorPicker ? (
         <>
@@ -142,16 +173,32 @@ const NoteContextMenu: React.FC<NoteContextMenuProps> = ({
           </button>
         </>
       ) : (
-        <div className="p-2">
-          <div className="mb-2 font-medium">Select Color</div>
-          <div className="grid grid-cols-4 gap-2">
-            {NOTE_COLORS.map((color) => (
+        <div className="p-2 space-y-3">
+          {/* React-color SliderPicker */}
+          <div className="w-full">
+            <SliderPicker color={selectedColor} onChange={handleColorChange} />
+          </div>
+
+          {/* Preset colors */}
+          <div className="grid grid-cols-5 gap-1 mt-2">
+            {[
+              "#ffffff",
+              "#00AEEF",
+              "#FF9F43",
+              "#EE5253",
+              "#10AC84",
+              "#5f27cd",
+              "#FF9FF3",
+              "#F8EFBA",
+              "#D6A2E8",
+              "#54a0ff",
+            ].map((color) => (
               <div
-                key={color.id}
+                key={color}
                 className="w-6 h-6 rounded-full cursor-pointer border border-gray-300 transition-transform hover:scale-110"
-                style={{ backgroundColor: color.value }}
-                onClick={() => handleSelectColor(color)}
-                title={color.name}
+                style={{ backgroundColor: color }}
+                onClick={() => handlePresetColorClick(color)}
+                title={color}
               />
             ))}
           </div>

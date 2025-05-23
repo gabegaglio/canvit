@@ -30,9 +30,9 @@ export function useCanvasHandlers(position: CanvasPosition) {
       // The formula accounts for canvas position and scale
       const canvasX = (contextMenu.x - positionX) / scale;
       const canvasY = (contextMenu.y - positionY) / scale;
-      addNoteToCanvas({ 
-        x: canvasX, 
-        y: canvasY
+      addNoteToCanvas({
+        x: canvasX,
+        y: canvasY,
       });
     }
   };
@@ -46,9 +46,9 @@ export function useCanvasHandlers(position: CanvasPosition) {
     const canvasX = (viewportWidth / 2 - positionX) / scale;
     const canvasY = (viewportHeight / 2 - positionY) / scale;
 
-    addNoteToCanvas({ 
-      x: canvasX, 
-      y: canvasY
+    addNoteToCanvas({
+      x: canvasX,
+      y: canvasY,
     });
   };
 

@@ -16,7 +16,7 @@ body {
 
 /* Logo blue color */
 :root {
-  --logo-blue: #00AEEF;
+  --logo-blue: #00aeef;
   font-family: monospace, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;

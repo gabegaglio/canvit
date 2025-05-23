@@ -7,6 +7,7 @@ import { useGridSnap } from "../hooks/useGridSnap";
 import SnapGuide from "./SnapGuide";
 import { BOX_SIZE } from "../constants";
 import NoteContextMenu from "../menus/NoteContextMenu";
+import { Portal } from "../utils/PortalHelper";
 
 interface NoteProps {
   id?: string;
@@ -98,6 +99,7 @@ const Note: React.FC<NoteProps> = ({
 
   // Handle right click to show context menu
   const handleRightClick = (e: React.MouseEvent) => {
+    console.log("Note right-click detected", e);
     e.preventDefault();
     e.stopPropagation();
 
@@ -112,20 +114,25 @@ const Note: React.FC<NoteProps> = ({
       const x = e.clientX;
       const y = e.clientY;
 
+      console.log("Setting note context menu at", x, y);
       setContextMenu({ x, y });
     }
   };
 
   // Close the context menu
   const handleCloseContextMenu = () => {
+    console.log("Closing note context menu");
     setContextMenu(null);
   };
 
   // Set up the drag gesture for moving the note - disabled when resizing
   const bindDrag = useDrag(
-    ({ movement: [mx, my], first, last, memo }) => {
+    ({ movement: [mx, my], first, last, memo, event, type }) => {
       // Don't drag if we're resizing or hovering over a resize handle
       if (isResizing || isHoveringHandle) return;
+
+      // Skip right-click dragging (only handle left mouse button)
+      if (type === "mousedown" && (event as MouseEvent).button !== 0) return;
 
       if (first) {
         setIsDragging(true);
@@ -240,7 +247,7 @@ const Note: React.FC<NoteProps> = ({
       {/* Note container */}
       <div
         ref={noteRef}
-        className={`backdrop-blur-lg rounded-lg shadow-lg relative ${className}`}
+        className={`note-container backdrop-blur-lg rounded-lg shadow-lg relative ${className}`}
         style={combinedStyle}
         {...bindDrag()}
         onContextMenu={handleRightClick}
@@ -293,14 +300,16 @@ const Note: React.FC<NoteProps> = ({
         </div>
       </div>
 
-      {/* Context menu */}
+      {/* Context menu - rendered in a portal to avoid z-index issues */}
       {contextMenu && id && (
-        <NoteContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          noteId={id}
-          onClose={handleCloseContextMenu}
-        />
+        <Portal>
+          <NoteContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            noteId={id}
+            onClose={handleCloseContextMenu}
+          />
+        </Portal>
       )}
     </>
   );

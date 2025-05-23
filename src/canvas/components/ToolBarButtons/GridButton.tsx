@@ -11,8 +11,8 @@ interface GridButtonProps {
 const GridButton: React.FC<GridButtonProps> = ({ isGridActive, onClick }) => {
   return (
     <button
-      className={`w-12 h-12 flex items-center justify-center rounded-full shadow-lg transition-all duration-200 hover:scale-110 focus:outline-none cursor-pointer ${
-        isGridActive ? "" : "bg-white"
+      className={`glass-icon-button ${
+        isGridActive ? "" : ""
       }`}
       style={{
         backgroundColor: isGridActive ? `${LOGO_BLUE}20` : "white",
