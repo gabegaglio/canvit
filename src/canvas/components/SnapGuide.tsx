@@ -1,5 +1,8 @@
 import React from "react";
 
+// Logo blue color
+const LOGO_BLUE = "#00AEEF";
+
 interface SnapGuideProps {
   position: {
     x: number;
@@ -24,7 +27,7 @@ const SnapGuide: React.FC<SnapGuideProps> = ({
 
   return (
     <div
-      className="absolute pointer-events-none border-2 border-dashed border-blue-500 bg-blue-100 bg-opacity-10"
+      className="absolute pointer-events-none border-2 border-dashed bg-opacity-10"
       style={{
         left: position.x,
         top: position.y,
@@ -32,6 +35,8 @@ const SnapGuide: React.FC<SnapGuideProps> = ({
         height: dimensions.height,
         zIndex: 4,
         transition: "all 0.1s ease-out",
+        borderColor: LOGO_BLUE,
+        backgroundColor: `${LOGO_BLUE}20`, // 20 is hex for 12% opacity
       }}
     />
   );

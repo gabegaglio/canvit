@@ -1,5 +1,8 @@
 import React from "react";
 
+// Logo blue color
+const LOGO_BLUE = "#00AEEF";
+
 interface GridButtonProps {
   isGridActive: boolean;
   onClick: () => void;
@@ -8,9 +11,12 @@ interface GridButtonProps {
 const GridButton: React.FC<GridButtonProps> = ({ isGridActive, onClick }) => {
   return (
     <button
-      className={`w-12 h-12 flex items-center justify-center rounded-full bg-white shadow-lg transition-all duration-200 hover:scale-110 focus:outline-none cursor-pointer ${
-        isGridActive ? "bg-blue-100" : "bg-white"
+      className={`w-12 h-12 flex items-center justify-center rounded-full shadow-lg transition-all duration-200 hover:scale-110 focus:outline-none cursor-pointer ${
+        isGridActive ? "" : "bg-white"
       }`}
+      style={{
+        backgroundColor: isGridActive ? `${LOGO_BLUE}20` : "white",
+      }}
       onClick={onClick}
       title={isGridActive ? "Hide Grid" : "Show Grid"}
     >
@@ -22,11 +28,10 @@ const GridButton: React.FC<GridButtonProps> = ({ isGridActive, onClick }) => {
           height="24"
           viewBox="0 0 24 24"
           fill="none"
-          stroke="currentColor"
+          stroke={LOGO_BLUE}
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="text-blue-600"
         >
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
           <line x1="3" y1="9" x2="21" y2="9"></line>

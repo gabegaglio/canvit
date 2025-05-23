@@ -3,6 +3,8 @@ import { useCanvas } from "../../contexts/CanvasContext";
 
 // Canvas size constant
 const CANVAS_SIZE = 100000;
+// Logo blue color
+const LOGO_BLUE = "#00AEEF";
 
 interface CanvasContextMenuProps {
   x: number;
@@ -65,7 +67,10 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
       >
         <span className="relative">
           Add Note
-          <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-black group-hover:w-full transition-all duration-300 ease-in-out"></span>
+          <span
+            className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ease-in-out"
+            style={{ backgroundColor: LOGO_BLUE }}
+          ></span>
         </span>
       </button>
 
@@ -75,7 +80,10 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
       >
         <span className="relative">
           Go to Origin
-          <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-black group-hover:w-full transition-all duration-300 ease-in-out"></span>
+          <span
+            className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ease-in-out"
+            style={{ backgroundColor: LOGO_BLUE }}
+          ></span>
         </span>
       </button>
 
@@ -85,7 +93,10 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
       >
         <span className="relative">
           {isGridActive ? "Hide Grid" : "Show Grid"}
-          <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-black group-hover:w-full transition-all duration-300 ease-in-out"></span>
+          <span
+            className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ease-in-out"
+            style={{ backgroundColor: LOGO_BLUE }}
+          ></span>
         </span>
       </button>
     </div>

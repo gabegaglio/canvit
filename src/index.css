@@ -14,7 +14,9 @@ body {
   position: relative;
 }
 
+/* Logo blue color */
 :root {
+  --logo-blue: #00AEEF;
   font-family: monospace, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -62,9 +64,10 @@ body {
 }
 
 .glass-icon-button:hover {
-  background-color: rgba(255, 255, 255, 0.3);
+  background-color: rgba(0, 174, 239, 0.2); /* Logo blue with transparency */
   transform: translateY(-2px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  border-color: rgba(0, 174, 239, 0.3); /* Logo blue border with transparency */
 }
 
 .glass-icon-button:active {
