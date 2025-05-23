@@ -30,7 +30,7 @@ const SnapGuide: React.FC<SnapGuideProps> = ({
         top: position.y,
         width: dimensions.width,
         height: dimensions.height,
-        zIndex: 10,
+        zIndex: 4,
         transition: "all 0.1s ease-out",
       }}
     />
