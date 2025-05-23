@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+/* Global reset to remove margins and padding */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  position: relative;
+}
+
 :root {
   font-family: monospace, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
