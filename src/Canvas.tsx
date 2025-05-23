@@ -7,6 +7,7 @@ import CanvasContextMenu from "./canvas/menus/CanvasContextmenu";
 import { useCanvasHandlers } from "./canvas/hooks/useCanvasHandlers";
 import CanvasContent from "./canvas/components/CanvasContent";
 import { CANVAS_SIZE, BOX_SIZE } from "./canvas/constants";
+import DebugPanel from "./utils/DebugPanel";
 import "./App.css";
 
 function CanvasInner() {
@@ -44,6 +45,16 @@ function CanvasInner() {
 
   // Prevent context menu on right click
   const handleCanvasRightClick = (e: React.MouseEvent) => {
+    // Check if the event originated from a note element
+    const target = e.target as HTMLElement;
+    const isNote = target.closest(".note-container");
+
+    // If it's a note, let the note handle it
+    if (isNote) {
+      return;
+    }
+
+    // Otherwise, show the canvas context menu
     e.preventDefault();
     handleContextMenu(e);
   };
@@ -60,6 +71,16 @@ function CanvasInner() {
       <Toolbar
         onAddNote={handleAddNoteFromToolbar}
         onToggleGrid={handleToggleGrid}
+      />
+
+      {/* Debug panel - disabled by default */}
+      <DebugPanel
+        isEnabled={false}
+        scale={scale}
+        positionX={positionX}
+        positionY={positionY}
+        isGridActive={isGridActive}
+        hasContextMenu={contextMenu !== null}
       />
 
       <div
