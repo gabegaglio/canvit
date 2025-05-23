@@ -8,6 +8,8 @@ interface Note {
   width: number;
   height: number;
   content: string;
+  color?: string; // Background color of the note
+  image?: string; // Image URL or data URL
 }
 
 interface CanvasContextType {
@@ -22,6 +24,8 @@ interface CanvasContextType {
   updateNotePosition: (id: string, x: number, y: number) => void;
   deleteNote: (id: string) => void;
   updateNoteDimensions: (id: string, width: number, height: number) => void;
+  updateNoteColor: (id: string, color: string) => void;
+  updateNoteImage: (id: string, image: string) => void;
 }
 
 const CanvasContext = createContext<CanvasContextType | null>(null);
@@ -80,6 +84,18 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   };
 
+  const updateNoteColor = (id: string, color: string) => {
+    setNotes((prevNotes) =>
+      prevNotes.map((note) => (note.id === id ? { ...note, color } : note))
+    );
+  };
+
+  const updateNoteImage = (id: string, image: string) => {
+    setNotes((prevNotes) =>
+      prevNotes.map((note) => (note.id === id ? { ...note, image } : note))
+    );
+  };
+
   return (
     <CanvasContext.Provider
       value={{
@@ -94,6 +110,8 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({
         updateNotePosition,
         deleteNote,
         updateNoteDimensions,
+        updateNoteColor,
+        updateNoteImage,
       }}
     >
       {children}

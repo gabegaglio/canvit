@@ -77,6 +77,7 @@ function CanvasInner() {
           boxSize={BOX_SIZE}
           logoSrc={canvitLogo}
           showGrid={isGridActive}
+          onCloseCanvasContextMenu={handleCloseContextMenu}
         />
       </div>
 
