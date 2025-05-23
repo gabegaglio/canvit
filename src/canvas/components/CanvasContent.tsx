@@ -110,6 +110,8 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
           onResize={handleNoteResize}
           scale={scale}
           content={note.content}
+          isGridActive={showGrid}
+          gridSize={boxSize}
         >
           {note.content}
         </Note>

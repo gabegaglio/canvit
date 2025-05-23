@@ -3,6 +3,9 @@ import { useNoteResize } from "../hooks/useNoteResize";
 import type { ResizeHandle } from "../hooks/useNoteResize";
 import { useElementPosition } from "../../utils/dragUtils";
 import { useDrag } from "@use-gesture/react";
+import { useGridSnap } from "../hooks/useGridSnap";
+import SnapGuide from "./SnapGuide";
+import { BOX_SIZE } from "../constants";
 
 interface NoteProps {
   id?: string;
@@ -15,6 +18,8 @@ interface NoteProps {
   width?: number;
   height?: number;
   content?: string;
+  isGridActive?: boolean; // Whether grid snapping is active
+  gridSize?: number; // Grid size for snapping
 }
 
 const Note: React.FC<NoteProps> = ({
@@ -28,6 +33,8 @@ const Note: React.FC<NoteProps> = ({
   width: propWidth,
   height: propHeight,
   content = "",
+  isGridActive = false,
+  gridSize = BOX_SIZE,
 }) => {
   const noteRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -54,6 +61,18 @@ const Note: React.FC<NoteProps> = ({
     onResize,
     onPositionChange: onDragEnd,
     content, // Pass content to calculate minimum width
+  });
+
+  // Use grid snap hook
+  const { snapPosition, snapDimensions, showSnapGuide } = useGridSnap({
+    x: position.x,
+    y: position.y,
+    width: dimensions.width,
+    height: dimensions.height,
+    gridSize,
+    isGridActive,
+    isDragging,
+    isResizing,
   });
 
   // Use utility hook for position and dimension updates
@@ -88,13 +107,20 @@ const Note: React.FC<NoteProps> = ({
       const x = memo.initialX + adjustedMx;
       const y = memo.initialY + adjustedMy;
 
-      // Update position
+      // Update position (grid snapping happens on drag end)
       updatePosition(x, y);
 
       if (last) {
         setIsDragging(false);
+        
+        // If grid is active, snap to grid on drag end
+        const finalX = isGridActive ? snapPosition.x : x;
+        const finalY = isGridActive ? snapPosition.y : y;
+        
+        updatePosition(finalX, finalY);
+        
         if (id && onDragEnd) {
-          onDragEnd(id, x, y);
+          onDragEnd(id, finalX, finalY);
         }
       }
 
@@ -108,7 +134,31 @@ const Note: React.FC<NoteProps> = ({
 
   // Wrapper for resize bindings to track handle hover state
   const createHandleProps = (handle: ResizeHandle) => {
-    const resizeBindings = bindResize(handle);
+    const resizeBindings = bindResize(handle, (newDimensions, newPosition) => {
+      // Apply grid snapping to resize if active
+      if (isGridActive && !isDragging) {
+        // We'll snap on release in the useNoteResize hook
+        return {
+          width: newDimensions.width,
+          height: newDimensions.height,
+          x: newPosition.x,
+          y: newPosition.y,
+          snapWidth: snapDimensions.width,
+          snapHeight: snapDimensions.height,
+          snapX: snapPosition.x,
+          snapY: snapPosition.y,
+          shouldSnap: isGridActive,
+        };
+      }
+      
+      return {
+        width: newDimensions.width,
+        height: newDimensions.height, 
+        x: newPosition.x,
+        y: newPosition.y,
+        shouldSnap: false,
+      };
+    });
 
     return {
       ...resizeBindings(),
@@ -142,35 +192,45 @@ const Note: React.FC<NoteProps> = ({
   const isEmpty = !content || content.trim() === "";
 
   return (
-    <div
-      ref={noteRef}
-      className={`bg-white-900 backdrop-blur-lg rounded-lg shadow-lg relative ${className}`}
-      style={combinedStyle}
-      {...bindDrag()}
-    >
-      {/* Inner content container with padding */}
-      <div className="p-4 w-full h-full overflow-hidden text-black">
-        {isEmpty ? (
-          <div className="text-gray-500 italic">Add an idea</div>
-        ) : (
-          <div className="text-black break-words">{content}</div>
-        )}
-      </div>
-
-      {/* Single resize handle in the bottom right corner */}
+    <>
+      {/* Snap guide outline */}
+      <SnapGuide 
+        position={snapPosition}
+        dimensions={snapDimensions}
+        show={showSnapGuide && isGridActive}
+      />
+      
+      {/* Note container */}
       <div
-        className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize z-10"
-        {...createHandleProps("bottomRight")}
+        ref={noteRef}
+        className={`bg-white-900 backdrop-blur-lg rounded-lg shadow-lg relative ${className}`}
+        style={combinedStyle}
+        {...bindDrag()}
       >
-        <svg
-          className="w-full h-full text-black opacity-50"
-          viewBox="0 0 24 24"
-          fill="currentColor"
+        {/* Inner content container with padding */}
+        <div className="p-4 w-full h-full overflow-hidden text-black">
+          {isEmpty ? (
+            <div className="text-gray-500 italic">Add an idea</div>
+          ) : (
+            <div className="text-black break-words">{content}</div>
+          )}
+        </div>
+
+        {/* Single resize handle in the bottom right corner */}
+        <div
+          className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize z-10"
+          {...createHandleProps("bottomRight")}
         >
-          <path d="M22,22H20V20H22V22M22,18H20V16H22V18M18,22H16V20H18V22M18,18H16V16H18V18M14,22H12V20H14V22M22,14H20V12H22V14Z" />
-        </svg>
+          <svg
+            className="w-full h-full text-black opacity-50"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path d="M22,22H20V20H22V22M22,18H20V16H22V18M18,22H16V20H18V22M18,18H16V16H18V18M14,22H12V20H14V22M22,14H20V12H22V14Z" />
+          </svg>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
