@@ -29,6 +29,18 @@ const MIN_SIZE = 80;
 // Minimum width per character for longest word calculation
 const MIN_WIDTH_PER_CHAR = 8;
 
+interface ResizeCallbackData {
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  snapWidth?: number;
+  snapHeight?: number;
+  snapX?: number;
+  snapY?: number;
+  shouldSnap?: boolean;
+}
+
 export function useNoteResize({
   id,
   scale = 1,
@@ -45,7 +57,8 @@ export function useNoteResize({
     height: initialHeight,
   });
   const [position, setPosition] = useState({ x: initialX, y: initialY });
-  const [isResizing, setIsResizing] = useState<ResizeHandle | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [currentHandle, setCurrentHandle] = useState<ResizeHandle | null>(null);
 
   // Starting values for the current resize operation
   const startDimensions = useRef({ width: 0, height: 0 });
@@ -90,7 +103,13 @@ export function useNoteResize({
     setPosition({ x, y });
   };
 
-  const bindResize = (handle: ResizeHandle) => {
+  const bindResize = (
+    handle: ResizeHandle, 
+    resizeCallback?: (
+      dimensions: { width: number; height: number },
+      position: { x: number; y: number }
+    ) => ResizeCallbackData | void
+  ) => {
     // We only support bottomRight resize now
     if (handle !== "bottomRight") {
       return () => ({});
@@ -101,7 +120,8 @@ export function useNoteResize({
         // When starting a resize, capture initial values
         if (first) {
           startDimensions.current = { ...latestDimensions.current };
-          setIsResizing(handle);
+          setIsResizing(true);
+          setCurrentHandle(handle);
         }
 
         // Adjust movement based on canvas scale
@@ -113,21 +133,56 @@ export function useNoteResize({
         const newWidth = Math.max(minWidth, startDimensions.current.width + adjustedMx);
         const newHeight = Math.max(MIN_SIZE, startDimensions.current.height + adjustedMy);
 
+        // Get grid snapping data if callback provided
+        let finalWidth = newWidth;
+        let finalHeight = newHeight;
+        let finalX = position.x;
+        let finalY = position.y;
+        
+        if (resizeCallback) {
+          const callbackData = resizeCallback({ width: newWidth, height: newHeight }, { x: position.x, y: position.y });
+          
+          if (callbackData) {
+            // During drag, show actual position for smooth movement
+            finalWidth = callbackData.width;
+            finalHeight = callbackData.height;
+            finalX = callbackData.x;
+            finalY = callbackData.y;
+            
+            // On last event, apply snapping if needed
+            if (last && callbackData.shouldSnap) {
+              finalWidth = callbackData.snapWidth ?? finalWidth;
+              finalHeight = callbackData.snapHeight ?? finalHeight;
+              finalX = callbackData.snapX ?? finalX;
+              finalY = callbackData.snapY ?? finalY;
+            }
+          }
+        }
+
         // Update state with smooth visual feedback
-        setDimensions({ width: newWidth, height: newHeight });
-        latestDimensions.current = { width: newWidth, height: newHeight };
+        setDimensions({ width: finalWidth, height: finalHeight });
+        latestDimensions.current = { width: finalWidth, height: finalHeight };
+        
+        // Update position if changed 
+        if (finalX !== position.x || finalY !== position.y) {
+          setPosition({ x: finalX, y: finalY });
+        }
 
         // Continuously update parent during drag for smoothness
         if (active && id) {
-          onResize?.(id, newWidth, newHeight);
+          onResize?.(id, finalWidth, finalHeight);
         }
 
         // When a resize operation ends
         if (last && id) {
           // Final notification to parent components
-          onResize?.(id, newWidth, newHeight);
+          onResize?.(id, finalWidth, finalHeight);
+          if (finalX !== position.x || finalY !== position.y) {
+            onPositionChange?.(id, finalX, finalY);
+          }
           // Clear resizing state
-          setIsResizing(null);
+          setIsResizing(false);
+          setCurrentHandle(null);
         }
       },
       {
@@ -138,13 +193,14 @@ export function useNoteResize({
   };
 
   const getResizeCursor = () => {
-    return isResizing ? "nwse-resize" : null;
+    return currentHandle === "bottomRight" ? "nwse-resize" : null;
   };
 
   return {
     dimensions,
     position,
     isResizing,
+    currentHandle,
     updateDimensions,
     updatePosition,
     bindResize,
