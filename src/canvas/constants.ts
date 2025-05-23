@@ -1,3 +1,7 @@
-// Canvas size and dimensions
+// Canvas constants
+
+// Size of the canvas in pixels (square)
 export const CANVAS_SIZE = 100000;
-export const BOX_SIZE = 250;
+
+// Size of the grid box in pixels
+export const BOX_SIZE = 50;

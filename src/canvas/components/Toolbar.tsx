@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from "react";
 import AddButton from "./ToolBarButtons/AddButton";
 import HomeButton from "./ToolBarButtons/HomeButton";
+import GridButton from "./ToolBarButtons/GridButton";
 
 interface ToolbarProps {
   onAddNote?: () => void;
+  onToggleGrid?: (isActive: boolean) => void;
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({ onAddNote }) => {
+const Toolbar: React.FC<ToolbarProps> = ({ onAddNote, onToggleGrid }) => {
   const [visible, setVisible] = useState(false);
+  const [isGridActive, setIsGridActive] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -22,6 +25,14 @@ const Toolbar: React.FC<ToolbarProps> = ({ onAddNote }) => {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
+  const handleToggleGrid = () => {
+    const newState = !isGridActive;
+    setIsGridActive(newState);
+    if (onToggleGrid) {
+      onToggleGrid(newState);
+    }
+  };
+
   return (
     <div
       className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] flex flex-row gap-4 items-end transition-all duration-300 pointer-events-none
@@ -30,6 +41,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ onAddNote }) => {
     >
       <HomeButton />
       {onAddNote && <AddButton onClick={onAddNote} />}
+      <GridButton isGridActive={isGridActive} onClick={handleToggleGrid} />
     </div>
   );
 };
