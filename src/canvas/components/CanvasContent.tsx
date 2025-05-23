@@ -9,6 +9,7 @@ interface CanvasContentProps {
   canvasSize: number;
   boxSize: number;
   logoSrc: string;
+  showGrid?: boolean;
 }
 
 const CanvasContent: React.FC<CanvasContentProps> = ({
@@ -18,6 +19,7 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
   canvasSize,
   boxSize,
   logoSrc,
+  showGrid = false,
 }) => {
   const { notes, updateNotePosition, updateNoteDimensions, updateNote } =
     useCanvas();
@@ -38,6 +40,27 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
     [updateNoteDimensions]
   );
 
+  // Generate the grid pattern if grid is enabled
+  const renderGrid = () => {
+    if (!showGrid) return null;
+
+    // Create a grid pattern with the boxSize
+    return (
+      <div className="absolute inset-0 pointer-events-none">
+        <div
+          className="w-full h-full"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)
+            `,
+            backgroundSize: `${boxSize}px ${boxSize}px`,
+          }}
+        />
+      </div>
+    );
+  };
+
   return (
     <div
       className="absolute left-0 top-0 bg-white"
@@ -48,6 +71,9 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
         transformOrigin: "0 0",
       }}
     >
+      {/* Grid pattern if enabled */}
+      {renderGrid()}
+
       {/* Center logo - positioned exactly at the center of the canvas */}
       <img
         src={logoSrc}
@@ -56,13 +82,13 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
         style={{
           left: canvasSize / 2,
           top: canvasSize / 2,
-          width: boxSize * 1.5,
-          height: boxSize * 1.5,
+          width: boxSize * 3,
+          height: boxSize * 3,
           objectFit: "contain",
           zIndex: 1,
           pointerEvents: "none",
           userSelect: "none",
-          opacity: 1,
+          opacity: 0.8,
           transform: "translate(-50%, -50%)", // This centers the image based on its own dimensions
         }}
       />

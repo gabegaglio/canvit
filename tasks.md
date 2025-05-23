@@ -49,30 +49,30 @@ This file outlines a step-by-step development plan for building an MVP of the In
 
 ---
 
-## 🗃️ Boxes: Core Units
+## 🗃️ Notees: Core Units
 
-### 9. Create `Box.tsx` component
+### 9. Create `Note.tsx` component
 - Start: A styled div rendered at x/y with size
-- End: Can render multiple boxes on canvas
+- End: Can render multiple Notees on canvas
 
-### 10. Add box on click
-- Start: Button or shortcut to add new box
-- End: Box appears at center of current viewport
+### 10. Add Note on click
+- Start: Button or shortcut to add new Note
+- End: Note appears at center of current viewport
 
-### 11. Make box draggable
+### 11. Make Note draggable
 - Start: Add `react-use-gesture` or manual drag logic
-- End: Can reposition boxes on canvas
+- End: Can reposition Notees on canvas
 
-### 12. Make box resizable
+### 12. Make Note resizable
 - Start: Add resize handles
-- End: User can resize any box from corners
+- End: User can resize any Note from corners
 
 ---
 
 ## 📝 Modal Editor
 
 ### 13. Create `TextEditorModal.tsx`
-- Start: Modal triggered on box click
+- Start: Modal triggered on Note click
 - End: Opens modal with text content loaded
 
 ### 14. Integrate Tiptap editor into modal
@@ -85,30 +85,30 @@ This file outlines a step-by-step development plan for building an MVP of the In
 
 ---
 
-## 🎨 Box Customization
+## 🎨 Note Customization
 
-### 16. Add color picker to box
+### 16. Add color picker to Note
 - Start: Basic color selection UI
-- End: Box background updates dynamically
+- End: Note background updates dynamically
 
 ### 17. Add image upload via Supabase storage
 - Start: UI to upload/select image
-- End: Box displays uploaded image in background
+- End: Note displays uploaded image in background
 
 ---
 
 ## 💾 Database Integration
 
-### 18. Create `boxes` table in Supabase
+### 18. Create `Notes` table in Supabase
 - Start: Design schema with position, size, content, etc.
 - End: Able to view records in Supabase Studio
 
-### 19. Build `boxService.ts` for DB interaction
+### 19. Build `NoteService.ts` for DB interaction
 - Start: Write CRUD methods (create, update, delete)
-- End: Can persist boxes to DB
+- End: Can persist Notees to DB
 
 ### 20. Sync canvas with Supabase on load
-- Start: Fetch boxes on user login
+- Start: Fetch Notees on user login
 - End: Boxes auto-render from Supabase data
 
 ---
@@ -117,7 +117,7 @@ This file outlines a step-by-step development plan for building an MVP of the In
 
 ### 21. Add real-time sync (optional)
 - Start: Set up Supabase subscriptions
-- End: All box changes reflect in real time
+- End: All note changes reflect in real time
 
 ### 22. Add mobile-friendly tweaks
 - Start: Use responsive Tailwind utilities

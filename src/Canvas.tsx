@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { CanvasProvider, useCanvas } from "./contexts/CanvasContext";
 import canvitLogo from "./assets/canvit.svg";
 import Toolbar from "./canvas/components/Toolbar";
@@ -7,12 +7,14 @@ import CanvasContextMenu from "./canvas/menus/CanvasContextmenu";
 import { useCanvasHandlers } from "./canvas/hooks/useCanvasHandlers";
 import CanvasContent from "./canvas/components/CanvasContent";
 import { CANVAS_SIZE, BOX_SIZE } from "./canvas/constants";
+import "./App.css";
 
 function CanvasInner() {
   const { scale, setScale, positionX, positionY, setPosition } = useCanvas();
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const last = useRef({ x: 0, y: 0 });
+  const [isGridActive, setIsGridActive] = useState(false);
 
   // Use canvas handlers for context menu and note adding
   const {
@@ -35,15 +37,37 @@ function CanvasInner() {
     setScale
   );
 
+  // Handle canvas click to close context menu
+  const handleCanvasClick = () => {
+    handleCloseContextMenu();
+  };
+
+  // Prevent context menu on right click
+  const handleCanvasRightClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleContextMenu(e);
+  };
+
+  // Handle grid toggle from toolbar
+  const handleToggleGrid = (active: boolean) => {
+    setIsGridActive(active);
+    console.log("Grid toggled:", active);
+    // Grid functionality will be implemented later
+  };
+
   return (
     <>
-      <Toolbar onAddNote={handleAddNoteFromToolbar} />
+      <Toolbar
+        onAddNote={handleAddNoteFromToolbar}
+        onToggleGrid={handleToggleGrid}
+      />
 
       <div
         ref={containerRef}
-        className="w-full h-full overflow-hidden bg-white relative"
+        className="w-full h-full overflow-hidden bg-slate-100 relative"
         style={{ minHeight: "100vh", minWidth: "100vw", touchAction: "none" }}
-        onContextMenu={handleContextMenu}
+        onClick={handleCanvasClick}
+        onContextMenu={handleCanvasRightClick}
       >
         <CanvasContent
           positionX={positionX}
@@ -52,6 +76,7 @@ function CanvasInner() {
           canvasSize={CANVAS_SIZE}
           boxSize={BOX_SIZE}
           logoSrc={canvitLogo}
+          showGrid={isGridActive}
         />
       </div>
 
