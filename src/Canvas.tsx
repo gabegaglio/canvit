@@ -86,6 +86,8 @@ function CanvasInner() {
           y={contextMenu.y}
           onClose={handleCloseContextMenu}
           onAddNote={handleAddNoteFromContextMenu}
+          isGridActive={isGridActive}
+          onToggleGrid={handleToggleGrid}
         />
       )}
     </>
