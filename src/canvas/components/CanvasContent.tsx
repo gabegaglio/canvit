@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import Note from "./Note";
 import { useCanvas } from "../../contexts/CanvasContext";
 
@@ -10,6 +10,7 @@ interface CanvasContentProps {
   boxSize: number;
   logoSrc: string;
   showGrid?: boolean;
+  onCloseCanvasContextMenu?: () => void; // Callback to close canvas context menu
 }
 
 const CanvasContent: React.FC<CanvasContentProps> = ({
@@ -20,6 +21,7 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
   boxSize,
   logoSrc,
   showGrid = false,
+  onCloseCanvasContextMenu,
 }) => {
   const { notes, updateNotePosition, updateNoteDimensions, updateNote } =
     useCanvas();
@@ -39,6 +41,13 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
     },
     [updateNoteDimensions]
   );
+
+  // Handle note right-click to close canvas context menu
+  const handleNoteRightClick = useCallback(() => {
+    if (onCloseCanvasContextMenu) {
+      onCloseCanvasContextMenu();
+    }
+  }, [onCloseCanvasContextMenu]);
 
   // Generate the grid pattern if grid is enabled
   const renderGrid = () => {
@@ -112,6 +121,9 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
           content={note.content}
           isGridActive={showGrid}
           gridSize={boxSize}
+          color={note.color}
+          image={note.image}
+          onNoteRightClick={handleNoteRightClick}
         >
           {note.content}
         </Note>
