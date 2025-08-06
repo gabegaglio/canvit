@@ -8,6 +8,7 @@ import { useCanvasHandlers } from "./canvas/hooks/useCanvasHandlers";
 import CanvasContent from "./canvas/components/CanvasContent";
 import { CANVAS_SIZE, BOX_SIZE } from "./canvas/constants";
 import DebugPanel from "./utils/DebugPanel";
+import ZoomIndicator from "./canvas/components/ZoomIndicator";
 import "./App.css";
 
 function CanvasInner() {
@@ -15,7 +16,7 @@ function CanvasInner() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const last = useRef({ x: 0, y: 0 });
-  const [isGridActive, setIsGridActive] = useState(false);
+  const [gridState, setGridState] = useState<"off" | "lines" | "snap">("off");
 
   // Use canvas handlers for context menu and note adding
   const {
@@ -60,10 +61,9 @@ function CanvasInner() {
   };
 
   // Handle grid toggle from toolbar
-  const handleToggleGrid = (active: boolean) => {
-    setIsGridActive(active);
-    console.log("Grid toggled:", active);
-    // Grid functionality will be implemented later
+  const handleToggleGrid = (newGridState: "off" | "lines" | "snap") => {
+    setGridState(newGridState);
+    console.log("Grid state changed:", newGridState);
   };
 
   return (
@@ -72,14 +72,14 @@ function CanvasInner() {
         onAddNote={handleAddNoteFromToolbar}
         onToggleGrid={handleToggleGrid}
       />
-
+      <ZoomIndicator scale={scale} />
       {/* Debug panel - disabled by default */}
       <DebugPanel
         isEnabled={false}
         scale={scale}
         positionX={positionX}
         positionY={positionY}
-        isGridActive={isGridActive}
+        gridState={gridState}
         hasContextMenu={contextMenu !== null}
       />
 
@@ -97,7 +97,8 @@ function CanvasInner() {
           canvasSize={CANVAS_SIZE}
           boxSize={BOX_SIZE}
           logoSrc={canvitLogo}
-          showGrid={isGridActive}
+          showGrid={gridState === "lines"}
+          showSnap={gridState === "snap"}
           onCloseCanvasContextMenu={handleCloseContextMenu}
         />
       </div>
@@ -108,7 +109,7 @@ function CanvasInner() {
           y={contextMenu.y}
           onClose={handleCloseContextMenu}
           onAddNote={handleAddNoteFromContextMenu}
-          isGridActive={isGridActive}
+          gridState={gridState}
           onToggleGrid={handleToggleGrid}
         />
       )}

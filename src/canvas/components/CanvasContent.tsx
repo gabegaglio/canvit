@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
 import Note from "./Note";
+import Image from "./Image";
 import { useCanvas } from "../../contexts/CanvasContext";
 
 interface CanvasContentProps {
@@ -10,6 +11,7 @@ interface CanvasContentProps {
   boxSize: number;
   logoSrc: string;
   showGrid?: boolean;
+  showSnap?: boolean;
   onCloseCanvasContextMenu?: () => void; // Callback to close canvas context menu
 }
 
@@ -21,10 +23,18 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
   boxSize,
   logoSrc,
   showGrid = false,
+  showSnap = false,
   onCloseCanvasContextMenu,
 }) => {
-  const { notes, updateNotePosition, updateNoteDimensions, updateNote } =
-    useCanvas();
+  const {
+    notes,
+    images,
+    updateNotePosition,
+    updateNoteDimensions,
+    updateNote,
+    updateImagePosition,
+    updateImageDimensions,
+  } = useCanvas();
 
   // Handle note drag end - memoized to avoid unnecessary recreations
   const handleNoteDragEnd = useCallback(
@@ -42,8 +52,31 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
     [updateNoteDimensions]
   );
 
+  // Handle image drag end
+  const handleImageDragEnd = useCallback(
+    (id: string, x: number, y: number) => {
+      updateImagePosition(id, x, y);
+    },
+    [updateImagePosition]
+  );
+
+  // Handle image resize
+  const handleImageResize = useCallback(
+    (id: string, width: number, height: number) => {
+      updateImageDimensions(id, width, height);
+    },
+    [updateImageDimensions]
+  );
+
   // Handle note right-click to close canvas context menu
   const handleNoteRightClick = useCallback(() => {
+    if (onCloseCanvasContextMenu) {
+      onCloseCanvasContextMenu();
+    }
+  }, [onCloseCanvasContextMenu]);
+
+  // Handle image right-click to close canvas context menu
+  const handleImageRightClick = useCallback(() => {
     if (onCloseCanvasContextMenu) {
       onCloseCanvasContextMenu();
     }
@@ -102,6 +135,29 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
         }}
       />
 
+      {/* Render images from the canvas context */}
+      {images.map((image) => (
+        <Image
+          key={image.id}
+          id={image.id}
+          className="absolute"
+          style={{
+            left: image.x,
+            top: image.y,
+            zIndex: 5,
+          }}
+          width={image.width}
+          height={image.height}
+          onDragEnd={handleImageDragEnd}
+          onResize={handleImageResize}
+          scale={scale}
+          src={image.src}
+          gridState={showGrid ? "lines" : showSnap ? "snap" : "off"}
+          gridSize={boxSize}
+          onImageRightClick={handleImageRightClick}
+        />
+      ))}
+
       {/* Render notes from the canvas context */}
       {notes.map((note) => (
         <Note
@@ -119,14 +175,12 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
           onResize={handleNoteResize}
           scale={scale}
           content={note.content}
-          isGridActive={showGrid}
+          gridState={showGrid ? "lines" : showSnap ? "snap" : "off"}
           gridSize={boxSize}
           color={note.color}
           image={note.image}
           onNoteRightClick={handleNoteRightClick}
-        >
-          {note.content}
-        </Note>
+        />
       ))}
     </div>
   );

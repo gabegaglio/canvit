@@ -51,6 +51,18 @@ export function useCanvasPanAndZoom(
     if (!container) return;
     function onWheel(e: WheelEvent) {
       if (!container) return;
+
+      // Don't handle wheel events if user is editing text
+      const target = e.target as HTMLElement;
+      const isEditingText =
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "INPUT" ||
+        target.contentEditable === "true" ||
+        target.closest("textarea") ||
+        target.closest("input");
+
+      if (isEditingText) return;
+
       if (e.ctrlKey || e.metaKey) return;
       e.preventDefault();
       const scaleFactor = 1 - e.deltaY * 0.001;

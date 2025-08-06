@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { useCanvas } from "../../contexts/CanvasContext";
-import type { NoteColorOption } from "../constants/noteColors";
 import { SliderPicker } from "react-color";
-import type { ColorResult } from "react-color";
+import { useColorPicker } from "../hooks/useColorPicker";
+import { useImageUpload } from "../hooks/useImageUpload";
 
 // Logo blue color
 const LOGO_BLUE = "#00AEEF";
@@ -21,94 +21,38 @@ const NoteContextMenu: React.FC<NoteContextMenuProps> = ({
   onClose,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const [selectedColor, setSelectedColor] = useState("#ffffff");
-  const { deleteNote, updateNoteColor, updateNoteImage, notes } = useCanvas();
+  const { deleteNote } = useCanvas();
 
-  // Initialize selected color from the note's current color
-  useEffect(() => {
-    const note = notes.find((note) => note.id === noteId);
-    if (note && note.color) {
-      setSelectedColor(note.color);
-    }
-  }, [noteId, notes]);
+  // Use custom hooks
+  const {
+    showColorPicker,
+    selectedColor,
+    handleShowColorPicker,
+    handleColorChange,
+    handlePresetColorClick,
+  } = useColorPicker({ noteId });
 
-  console.log("NoteContextMenu rendered", { x, y, noteId });
+  const { fileInputRef, handleImageClick, handleImageChange } = useImageUpload({
+    noteId,
+    onClose,
+  });
 
   // Handle deleting the note
   const handleDelete = () => {
-    console.log("Deleting note", noteId);
     deleteNote(noteId);
     onClose();
-  };
-
-  // Handle showing color picker
-  const handleShowColorPicker = () => {
-    console.log("Showing color picker");
-    setShowColorPicker(true);
-  };
-
-  // Handle color change from SliderPicker - update immediately on any change
-  const handleColorChange = (color: ColorResult) => {
-    console.log("Color changing:", color.hex);
-    const newColor = color.hex;
-    setSelectedColor(newColor);
-    updateNoteColor(noteId, newColor);
-  };
-
-  // Handle preset color selection - update immediately
-  const handlePresetColorClick = (color: string) => {
-    setSelectedColor(color);
-    updateNoteColor(noteId, color);
-  };
-
-  // Handle image upload click
-  const handleImageClick = () => {
-    console.log("Clicked image upload");
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  // Handle image file selection
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-
-      // Check file type
-      if (!file.type.startsWith("image/")) {
-        alert("Please select an image file.");
-        return;
-      }
-
-      // Read the file and convert to data URL
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target && typeof event.target.result === "string") {
-          console.log("Uploading image for note", noteId);
-          updateNoteImage(noteId, event.target.result);
-          onClose();
-        }
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        console.log("Clicked outside note context menu");
         onClose();
       }
     };
 
-    console.log("Adding click outside listener for note context menu");
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      console.log("Removing click outside listener for note context menu");
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [onClose]);
