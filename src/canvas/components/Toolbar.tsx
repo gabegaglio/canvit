@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from "react";
 import AddButton from "./ToolBarButtons/AddButton";
-import HomeButton from "./ToolBarButtons/HomeButton";
-import GridButton from "./ToolBarButtons/GridButton";
 
 interface ToolbarProps {
   onAddNote?: () => void;
-  onToggleGrid?: (isActive: boolean) => void;
+  onToggleGrid?: (active: boolean) => void;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({ onAddNote, onToggleGrid }) => {
@@ -26,11 +24,9 @@ const Toolbar: React.FC<ToolbarProps> = ({ onAddNote, onToggleGrid }) => {
   }, []);
 
   const handleToggleGrid = () => {
-    const newState = !isGridActive;
-    setIsGridActive(newState);
-    if (onToggleGrid) {
-      onToggleGrid(newState);
-    }
+    const newGridState = !isGridActive;
+    setIsGridActive(newGridState);
+    onToggleGrid?.(newGridState);
   };
 
   return (
@@ -39,9 +35,20 @@ const Toolbar: React.FC<ToolbarProps> = ({ onAddNote, onToggleGrid }) => {
         ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
       style={{ pointerEvents: visible ? "auto" : "none" }}
     >
-      <HomeButton />
       {onAddNote && <AddButton onClick={onAddNote} />}
-      <GridButton isGridActive={isGridActive} onClick={handleToggleGrid} />
+      <button
+        onClick={handleToggleGrid}
+        className="glass-icon-button"
+        title={isGridActive ? "Hide Grid" : "Show Grid"}
+      >
+        <div className="w-6 h-6 flex items-center justify-center">
+          <div
+            className={`w-4 h-4 border border-white ${
+              isGridActive ? "bg-white" : ""
+            }`}
+          ></div>
+        </div>
+      </button>
     </div>
   );
 };

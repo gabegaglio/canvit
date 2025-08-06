@@ -1,5 +1,5 @@
 import React from "react";
-import houseIcon from "../../../assets/house.svg";
+import houseIcon from "../../assets/house.svg";
 import { useCanvas } from "../../../contexts/CanvasContext";
 
 const CANVAS_SIZE = 100000;

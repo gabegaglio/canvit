@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
-import { getSnapPosition, getSnapDimensions } from "../utils/gridUtils";
+
+interface Position {
+  x: number;
+  y: number;
+}
+
+interface Dimensions {
+  width: number;
+  height: number;
+}
 
 interface UseGridSnapProps {
   x: number;
@@ -12,16 +21,13 @@ interface UseGridSnapProps {
   isResizing: boolean;
 }
 
-interface SnapInfo {
-  snapPosition: { x: number; y: number };
-  snapDimensions: { width: number; height: number };
+interface SnapResult {
+  snapPosition: Position;
+  snapDimensions: Dimensions;
   showSnapGuide: boolean;
 }
 
-/**
- * Hook to handle grid snapping behavior for notes
- */
-export const useGridSnap = ({
+export function useGridSnap({
   x,
   y,
   width,
@@ -30,49 +36,30 @@ export const useGridSnap = ({
   isGridActive,
   isDragging,
   isResizing,
-}: UseGridSnapProps): SnapInfo => {
-  // Calculate snap positions and dimensions
-  const snapPosition = getSnapPosition(x, y, gridSize);
-  const snapDimensions = getSnapDimensions(width, height, gridSize);
-
-  // State to track if we should show the snapping guide
+}: UseGridSnapProps): SnapResult {
   const [showSnapGuide, setShowSnapGuide] = useState(false);
 
-  // Update the snap guide visibility based on grid state and interaction
+  // Calculate snapped position
+  const snapPosition: Position = {
+    x: isGridActive ? Math.round(x / gridSize) * gridSize : x,
+    y: isGridActive ? Math.round(y / gridSize) * gridSize : y,
+  };
+
+  // Calculate snapped dimensions
+  const snapDimensions: Dimensions = {
+    width: isGridActive ? Math.round(width / gridSize) * gridSize : width,
+    height: isGridActive ? Math.round(height / gridSize) * gridSize : height,
+  };
+
+  // Show snap guide when dragging or resizing with grid active
   useEffect(() => {
-    if (!isGridActive) {
-      setShowSnapGuide(false);
-      return;
-    }
-
-    // Only show snap guides during active dragging or resizing
-    const isInteracting = isDragging || isResizing;
-
-    // Only show snap guides if we're not already snapped
-    const isAlreadySnapped =
-      x === snapPosition.x &&
-      y === snapPosition.y &&
-      width === snapDimensions.width &&
-      height === snapDimensions.height;
-
-    setShowSnapGuide(isInteracting && !isAlreadySnapped);
-  }, [
-    isGridActive,
-    isDragging,
-    isResizing,
-    x,
-    y,
-    width,
-    height,
-    snapPosition.x,
-    snapPosition.y,
-    snapDimensions.width,
-    snapDimensions.height,
-  ]);
+    const shouldShow = isGridActive && (isDragging || isResizing);
+    setShowSnapGuide(shouldShow);
+  }, [isGridActive, isDragging, isResizing]);
 
   return {
     snapPosition,
     snapDimensions,
     showSnapGuide,
   };
-};
+}

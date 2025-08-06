@@ -30,7 +30,10 @@ export default function Auth() {
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 font-mono">
+    <div
+      className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 font-sans"
+      style={{ fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}
+    >
       <div className="relative p-[2px] rounded-3xl bg-gradient-to-br from-blue-200/60 via-white/40 to-indigo-200/60 shadow-2xl">
         <form
           onSubmit={handleSubmit}

@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import { useCanvas } from "../../contexts/CanvasContext";
-import { getRandomIdea } from "../../utils/ideaBank";
 
 interface UseAddNoteOptions {
   defaultPosition?: { x: number; y: number };
@@ -14,9 +13,9 @@ interface UseAddNoteReturn {
   addNoteToCanvas: (note: {
     x: number;
     y: number;
-    content?: string;
-    width?: number;
-    height?: number;
+    content: string;
+    width: number;
+    height: number;
   }) => void;
   handleAddNote: () => void;
 }
@@ -44,22 +43,11 @@ export function useAddNote(options: UseAddNoteOptions = {}): UseAddNoteReturn {
     (note: {
       x: number;
       y: number;
-      content?: string;
-      width?: number;
-      height?: number;
+      content: string;
+      width: number;
+      height: number;
     }) => {
-      // Use provided content or generate random idea - ensure randomness each time
-      const content =
-        note.content !== undefined ? note.content : getRandomIdea();
-
-      addNote({
-        x: note.x,
-        y: note.y,
-        content,
-        width: note.width || 200,
-        height: note.height || 150,
-      });
-
+      addNote(note);
       setIsAddingNote(false);
       if (onAddComplete) {
         onAddComplete();
@@ -74,6 +62,9 @@ export function useAddNote(options: UseAddNoteOptions = {}): UseAddNoteReturn {
       addNoteToCanvas({
         x: notePosition.x,
         y: notePosition.y,
+        content: "",
+        width: 200,
+        height: 150,
       });
     }
   }, [isAddingNote, notePosition.x, notePosition.y, addNoteToCanvas]);
