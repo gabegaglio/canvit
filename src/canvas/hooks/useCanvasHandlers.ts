@@ -1,59 +1,63 @@
 import { useState } from "react";
-import { useAddNote } from "./useAddNote";
 
-interface CanvasPosition {
+interface CanvasHandlersProps {
   positionX: number;
   positionY: number;
   scale: number;
 }
 
-export function useCanvasHandlers(position: CanvasPosition) {
-  const { positionX, positionY, scale } = position;
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
+interface ContextMenuState {
+  x: number;
+  y: number;
+  isOpen: boolean;
+}
 
-  // Use the hook for adding notes
-  const { addNoteToCanvas } = useAddNote({
-    onAddComplete: () => setContextMenu(null),
-  });
+export function useCanvasHandlers({
+  positionX,
+  positionY,
+  scale,
+}: CanvasHandlersProps) {
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY });
-  };
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
-  const handleAddNoteFromContextMenu = () => {
-    if (contextMenu) {
-      // Convert screen coordinates to canvas coordinates
-      // The formula accounts for canvas position and scale
-      const canvasX = (contextMenu.x - positionX) / scale;
-      const canvasY = (contextMenu.y - positionY) / scale;
-      addNoteToCanvas({
-        x: canvasX,
-        y: canvasY,
-      });
-    }
-  };
-
-  const handleAddNoteFromToolbar = () => {
-    // Calculate the center of the visible canvas area
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    // Convert center of viewport to canvas coordinates
-    const canvasX = (viewportWidth / 2 - positionX) / scale;
-    const canvasY = (viewportHeight / 2 - positionY) / scale;
-
-    addNoteToCanvas({
-      x: canvasX,
-      y: canvasY,
+    setContextMenu({
+      x,
+      y,
+      isOpen: true,
     });
   };
 
   const handleCloseContextMenu = () => {
     setContextMenu(null);
+  };
+
+  const handleAddNoteFromContextMenu = () => {
+    if (!contextMenu) return;
+
+    // Convert screen coordinates to canvas coordinates
+    const canvasX = (contextMenu.x - positionX) / scale;
+    const canvasY = (contextMenu.y - positionY) / scale;
+
+    console.log("Adding note at canvas coordinates:", { canvasX, canvasY });
+    // TODO: Implement note adding logic
+    handleCloseContextMenu();
+  };
+
+  const handleAddNoteFromToolbar = () => {
+    // Add note at center of viewport
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+
+    const canvasX = (centerX - positionX) / scale;
+    const canvasY = (centerY - positionY) / scale;
+
+    console.log("Adding note at center:", { canvasX, canvasY });
+    // TODO: Implement note adding logic
   };
 
   return {

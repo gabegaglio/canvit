@@ -1,114 +1,54 @@
-import { useDrag } from "@use-gesture/react";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 
-/**
- * Creates a drag handler for moving an element
- * @param options Configuration options for the drag handler
- * @returns Drag binding
- */
-export const createDragHandler = ({
-  position,
-  scale = 1,
-  isResizing = false,
-  isHoveringHandle = false,
-  setIsDragging,
-  updatePosition,
-  onDragEnd,
-  id,
-}: {
-  position: { x: number; y: number };
-  scale?: number;
-  isResizing?: boolean;
-  isHoveringHandle?: boolean;
-  setIsDragging: (isDragging: boolean) => void;
+interface Position {
+  x: number;
+  y: number;
+}
+
+interface Dimensions {
+  width: number;
+  height: number;
+}
+
+interface UseElementPositionProps {
+  propWidth?: number;
+  propHeight?: number;
+  updateDimensions: (width: number, height: number) => void;
+  style?: React.CSSProperties;
+  position: Position;
   updatePosition: (x: number, y: number) => void;
-  onDragEnd?: (id: string, x: number, y: number) => void;
-  id?: string;
-}) => {
-  return useDrag(
-    ({ movement: [mx, my], first, last, memo }) => {
-      // Don't drag if we're resizing or hovering over a resize handle
-      if (isResizing || isHoveringHandle) return;
+}
 
-      if (first) {
-        setIsDragging(true);
-        return {
-          initialX: position.x,
-          initialY: position.y,
-        };
-      }
-
-      // Adjust movement based on canvas scale
-      const adjustedMx = mx / scale;
-      const adjustedMy = my / scale;
-
-      // Calculate new position
-      const x = memo.initialX + adjustedMx;
-      const y = memo.initialY + adjustedMy;
-
-      // Update position
-      updatePosition(x, y);
-
-      if (last) {
-        setIsDragging(false);
-        if (id && onDragEnd) {
-          onDragEnd(id, x, y);
-        }
-      }
-
-      return memo;
-    },
-    {
-      preventDefault: true,
-      filterTaps: true,
-    }
-  );
-};
-
-/**
- * Determines the appropriate cursor based on the interaction state
- */
-export const getCursorStyle = ({
-  isResizing,
-  isHoveringHandle,
-  isDragging,
-  getResizeCursor,
-}: {
-  isResizing: boolean;
-  isHoveringHandle: any; // Accept any type for isHoveringHandle
-  isDragging: boolean;
-  getResizeCursor?: () => string | null;
-}): string => {
-  if (isResizing) return getResizeCursor?.() || "grab";
-  if (isHoveringHandle) return "nwse-resize";
-  if (isDragging) return "grabbing";
-  return "grab";
-};
-
-/**
- * Hook to handle updating element dimensions and position from props
- */
-export const useElementPosition = (
-  propWidth: number | undefined,
-  propHeight: number | undefined,
-  updateDimensions: (width: number, height: number) => void,
-  style: React.CSSProperties | undefined,
-  position: { x: number; y: number },
-  updatePosition: (x: number, y: number) => void
-) => {
-  // Update dimensions from props if they change
+export function useElementPosition({
+  propWidth,
+  propHeight,
+  updateDimensions,
+  style,
+  position,
+  updatePosition,
+}: UseElementPositionProps) {
   useEffect(() => {
-    if (propWidth && propHeight) {
+    // Update dimensions if props change
+    if (propWidth !== undefined && propHeight !== undefined) {
       updateDimensions(propWidth, propHeight);
     }
   }, [propWidth, propHeight, updateDimensions]);
 
-  // Set initial position from props
   useEffect(() => {
-    if (style?.left && style?.top && position.x === 0 && position.y === 0) {
-      const x = style.left as number;
-      const y = style.top as number;
-      updatePosition(x, y);
+    // Update position if style changes
+    if (style?.left !== undefined && style?.top !== undefined) {
+      const x =
+        typeof style.left === "number"
+          ? style.left
+          : parseFloat(style.left as string);
+      const y =
+        typeof style.top === "number"
+          ? style.top
+          : parseFloat(style.top as string);
+
+      if (!isNaN(x) && !isNaN(y)) {
+        updatePosition(x, y);
+      }
     }
-  }, [style?.left, style?.top, position.x, position.y, updatePosition]);
-};
+  }, [style?.left, style?.top, updatePosition]);
+}

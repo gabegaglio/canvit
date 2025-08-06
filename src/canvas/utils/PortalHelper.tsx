@@ -1,34 +1,37 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface PortalProps {
   children: React.ReactNode;
+  container?: HTMLElement;
 }
 
-/**
- * A component to render content in a portal at the end of the document body
- * This helps with z-index issues and ensures menus are always on top
- */
-export const Portal: React.FC<PortalProps> = ({ children }) => {
+export const Portal: React.FC<PortalProps> = ({ children, container }) => {
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(
     null
   );
 
   useEffect(() => {
-    // Create a div for the portal
-    const div = document.createElement("div");
-    div.className = "portal-container";
-    document.body.appendChild(div);
-    setPortalContainer(div);
+    if (container) {
+      setPortalContainer(container);
+    } else {
+      // Create a default portal container if none is provided
+      const defaultContainer = document.createElement("div");
+      defaultContainer.id = "portal-container";
+      document.body.appendChild(defaultContainer);
+      setPortalContainer(defaultContainer);
 
-    // Clean up
-    return () => {
-      document.body.removeChild(div);
-    };
-  }, []);
+      return () => {
+        if (document.body.contains(defaultContainer)) {
+          document.body.removeChild(defaultContainer);
+        }
+      };
+    }
+  }, [container]);
 
-  // Only render when we have a container
-  if (!portalContainer) return null;
+  if (!portalContainer) {
+    return null;
+  }
 
   return createPortal(children, portalContainer);
 };

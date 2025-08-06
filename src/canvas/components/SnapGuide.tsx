@@ -1,45 +1,47 @@
 import React from "react";
 
-// Logo blue color
-const LOGO_BLUE = "#00AEEF";
-
 interface SnapGuideProps {
-  position: {
-    x: number;
-    y: number;
-  };
-  dimensions: {
-    width: number;
-    height: number;
-  };
   show: boolean;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  gridSize: number;
 }
 
-/**
- * Component that shows a visual guide for grid snapping
- */
 const SnapGuide: React.FC<SnapGuideProps> = ({
-  position,
-  dimensions,
   show,
+  x = 0,
+  y = 0,
+  width = 0,
+  height = 0,
+  gridSize,
 }) => {
   if (!show) return null;
 
   return (
     <div
-      className="absolute pointer-events-none border-2 border-dashed bg-opacity-10"
+      className="absolute pointer-events-none z-50"
       style={{
-        left: position.x,
-        top: position.y,
-        width: dimensions.width,
-        height: dimensions.height,
-        zIndex: 4,
-        transition: "all 0.1s ease-out",
-        borderColor: LOGO_BLUE,
-        backgroundColor: `${LOGO_BLUE}20`, // 20 is hex for 12% opacity
+        left: x,
+        top: y,
+        width,
+        height,
+        border: `2px dashed rgba(255, 255, 255, 0.6)`,
+        backgroundColor: "rgba(255, 255, 255, 0.1)",
       }}
-    />
+    >
+      {/* Grid snap indicators */}
+      <div
+        className="absolute w-full h-px bg-white opacity-40"
+        style={{ top: "50%" }}
+      />
+      <div
+        className="absolute w-px h-full bg-white opacity-40"
+        style={{ left: "50%" }}
+      />
+    </div>
   );
 };
 
-export default React.memo(SnapGuide);
+export default SnapGuide;
