@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getSnapPosition, getSnapDimensions } from "../utils/gridUtils";
 
 interface UseGridSnapProps {
@@ -7,7 +7,7 @@ interface UseGridSnapProps {
   width: number;
   height: number;
   gridSize: number;
-  isGridActive: boolean;
+  gridState: "off" | "lines" | "snap";
   isDragging: boolean;
   isResizing: boolean;
 }
@@ -27,19 +27,27 @@ export const useGridSnap = ({
   width,
   height,
   gridSize,
-  isGridActive,
+  gridState,
   isDragging,
   isResizing,
 }: UseGridSnapProps): SnapInfo => {
-  // Calculate snap positions and dimensions
-  const snapPosition = getSnapPosition(x, y, gridSize);
-  const snapDimensions = getSnapDimensions(width, height, gridSize);
+  // Memoize snap calculations to avoid unnecessary recalculations
+  const snapPosition = useMemo(
+    () => getSnapPosition(x, y, gridSize),
+    [x, y, gridSize]
+  );
+  const snapDimensions = useMemo(
+    () => getSnapDimensions(width, height, gridSize),
+    [width, height, gridSize]
+  );
 
   // State to track if we should show the snapping guide
   const [showSnapGuide, setShowSnapGuide] = useState(false);
 
   // Update the snap guide visibility based on grid state and interaction
   useEffect(() => {
+    const isGridActive = gridState !== "off";
+
     if (!isGridActive) {
       setShowSnapGuide(false);
       return;
@@ -57,7 +65,7 @@ export const useGridSnap = ({
 
     setShowSnapGuide(isInteracting && !isAlreadySnapped);
   }, [
-    isGridActive,
+    gridState,
     isDragging,
     isResizing,
     x,

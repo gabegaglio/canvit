@@ -5,8 +5,8 @@ interface DebugPanelProps {
   scale: number;
   positionX: number;
   positionY: number;
-  isGridActive: boolean;
-  hasContextMenu: boolean;
+  gridState?: "off" | "lines" | "snap";
+  hasContextMenu?: boolean;
   additionalInfo?: Record<string, any>;
 }
 
@@ -15,7 +15,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
   scale,
   positionX,
   positionY,
-  isGridActive,
+  gridState = "off",
   hasContextMenu,
   additionalInfo = {},
 }) => {
@@ -45,7 +45,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
           <p>
             Position: {positionX.toFixed(0)}, {positionY.toFixed(0)}
           </p>
-          <p>Grid: {isGridActive ? "On" : "Off"}</p>
+          <p>Grid: {gridState}</p>
           <p>Context Menu: {hasContextMenu ? "Open" : "Closed"}</p>
           {Object.entries(additionalInfo).map(([key, value]) => (
             <p key={key}>
@@ -62,7 +62,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
                 scale,
                 positionX,
                 positionY,
-                isGridActive,
+                gridState,
                 hasContextMenu,
                 ...additionalInfo,
               });
