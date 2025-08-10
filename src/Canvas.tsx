@@ -1,11 +1,12 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useState, useRef } from "react";
 import { CanvasProvider, useCanvas } from "./contexts/CanvasContext";
-import canvitLogo from "./assets/canvit.svg";
-import Toolbar from "./canvas/components/Toolbar";
-import { useCanvasPanAndZoom } from "./canvas/hooks/useCanvasPanAndZoom";
-import CanvasContextMenu from "./canvas/menus/CanvasContextmenu";
-import { useCanvasHandlers } from "./canvas/hooks/useCanvasHandlers";
 import CanvasContent from "./canvas/components/CanvasContent";
+import { useCanvasPanAndZoom } from "./canvas/hooks/canvas";
+import Toolbar from "./canvas/components/Toolbar";
+import { useCanvasHandlers } from "./canvas/hooks/canvas";
+import CanvasContextMenu from "./canvas/menus/CanvasContextmenu";
+import SettingsMenu from "./canvas/menus/SettingsMenu";
+import canvitLogo from "./assets/canvit.svg";
 import { CANVAS_SIZE, BOX_SIZE } from "./canvas/constants";
 import DebugPanel from "./utils/DebugPanel";
 import ZoomIndicator from "./canvas/components/ZoomIndicator";
@@ -17,6 +18,11 @@ function CanvasInner() {
   const isDragging = useRef(false);
   const last = useRef({ x: 0, y: 0 });
   const [gridState, setGridState] = useState<"off" | "lines" | "snap">("off");
+
+  // Simple state for settings - start with just theme and logo
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [showLogo, setShowLogo] = useState<boolean>(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Use canvas handlers for context menu and note adding
   const {
@@ -63,7 +69,31 @@ function CanvasInner() {
   // Handle grid toggle from toolbar
   const handleToggleGrid = (newGridState: "off" | "lines" | "snap") => {
     setGridState(newGridState);
-    console.log("Grid state changed:", newGridState);
+  };
+
+  // Simple theme toggle function
+  const toggleTheme = () => {
+    console.log("Theme toggle clicked. Current theme:", theme);
+    setTheme((prev) => {
+      const newTheme = prev === "light" ? "dark" : "light";
+      console.log("Theme changed from", prev, "to", newTheme);
+      return newTheme;
+    });
+  };
+
+  // Simple logo toggle function
+  const toggleLogo = () => {
+    console.log("Logo toggle clicked. Current showLogo:", showLogo);
+    setShowLogo((prev) => {
+      const newShowLogo = !prev;
+      console.log("Logo visibility changed from", prev, "to", newShowLogo);
+      return newShowLogo;
+    });
+  };
+
+  // Simple settings toggle
+  const toggleSettings = () => {
+    setShowSettings((prev) => !prev);
   };
 
   return (
@@ -71,8 +101,11 @@ function CanvasInner() {
       <Toolbar
         onAddNote={handleAddNoteFromToolbar}
         onToggleGrid={handleToggleGrid}
+        onToggleSettings={toggleSettings}
+        showSettings={showSettings}
+        theme={theme}
       />
-      <ZoomIndicator scale={scale} />
+      <ZoomIndicator scale={scale} theme={theme} />
       {/* Debug panel - disabled by default */}
       <DebugPanel
         isEnabled={false}
@@ -81,12 +114,21 @@ function CanvasInner() {
         positionY={positionY}
         gridState={gridState}
         hasContextMenu={contextMenu !== null}
+        theme={theme}
       />
 
       <div
         ref={containerRef}
-        className="w-full h-full overflow-hidden bg-slate-100 relative"
-        style={{ minHeight: "100vh", minWidth: "100vw", touchAction: "none" }}
+        className={`w-full h-full overflow-hidden relative transition-colors duration-200 ${
+          theme === "dark" ? "bg-black text-white" : "bg-white text-gray-900"
+        }`}
+        style={{
+          minHeight: "100vh",
+          minWidth: "100vw",
+          touchAction: "none",
+          backgroundColor: theme === "dark" ? "#000000" : "#ffffff", // Force inline style
+          color: theme === "dark" ? "#ffffff" : "#111827", // Force text color
+        }}
         onClick={handleCanvasClick}
         onContextMenu={handleCanvasRightClick}
       >
@@ -99,7 +141,9 @@ function CanvasInner() {
           logoSrc={canvitLogo}
           showGrid={gridState === "lines"}
           showSnap={gridState === "snap"}
+          showLogo={showLogo}
           onCloseCanvasContextMenu={handleCloseContextMenu}
+          theme={theme}
         />
       </div>
 
@@ -111,6 +155,17 @@ function CanvasInner() {
           onAddNote={handleAddNoteFromContextMenu}
           gridState={gridState}
           onToggleGrid={handleToggleGrid}
+          theme={theme}
+        />
+      )}
+
+      {showSettings && (
+        <SettingsMenu
+          closeSettings={() => setShowSettings(false)}
+          theme={theme}
+          onThemeToggle={toggleTheme}
+          showLogo={showLogo}
+          onLogoToggle={toggleLogo}
         />
       )}
     </>

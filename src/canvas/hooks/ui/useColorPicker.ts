@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useCanvas } from "../../contexts/CanvasContext";
+import { useCanvas } from "../../../contexts/CanvasContext";
 import type { ColorResult } from "react-color";
 
 interface UseColorPickerProps {

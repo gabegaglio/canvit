@@ -157,18 +157,25 @@ export function useNoteResize({
           );
 
           if (callbackData) {
-            // During drag, show actual position for smooth movement
-            finalWidth = callbackData.width;
-            finalHeight = callbackData.height;
-            finalX = callbackData.x;
-            finalY = callbackData.y;
-
-            // On last event, apply snapping if needed
-            if (last && callbackData.shouldSnap) {
-              finalWidth = callbackData.snapWidth ?? finalWidth;
-              finalHeight = callbackData.snapHeight ?? finalHeight;
-              finalX = callbackData.snapX ?? finalX;
-              finalY = callbackData.snapY ?? finalY;
+            // During resize, show smooth movement for better UX
+            // Only apply snapping at the very end
+            if (
+              last &&
+              callbackData.shouldSnap &&
+              callbackData.snapWidth &&
+              callbackData.snapHeight
+            ) {
+              // Final snap at the end of resize
+              finalWidth = callbackData.snapWidth;
+              finalHeight = callbackData.snapHeight;
+              finalX = callbackData.snapX ?? position.x;
+              finalY = callbackData.snapY ?? position.y;
+            } else {
+              // Show actual position for smooth movement during resize
+              finalWidth = callbackData.width;
+              finalHeight = callbackData.height;
+              finalX = callbackData.x;
+              finalY = callbackData.y;
             }
           }
         }

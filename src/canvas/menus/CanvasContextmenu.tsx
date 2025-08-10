@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { useCanvas } from "../../contexts/CanvasContext";
-import { useCanvasPictureUpload } from "../hooks/useCanvasPictureUpload";
+import { useCanvasPictureUpload } from "../hooks/image";
 
 // Canvas size constant
 const CANVAS_SIZE = 100000;
@@ -14,6 +14,7 @@ interface CanvasContextMenuProps {
   onAddNote: () => void;
   gridState: "off" | "lines" | "snap";
   onToggleGrid: (gridState: "off" | "lines" | "snap") => void;
+  theme: "light" | "dark";
 }
 
 const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
@@ -23,9 +24,11 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
   onAddNote,
   gridState,
   onToggleGrid,
+  theme,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
-  const { setPosition, setScale, positionX, positionY, scale } = useCanvas();
+  const { setPosition, setScale, scale } = useCanvas();
+  const isDark = theme === "dark";
 
   // Use picture upload hook
   const { pictureInputRef, handlePictureClick, handlePictureChange } =
@@ -71,11 +74,17 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="absolute bg-white bg-opacity-20 backdrop-blur-md shadow-lg rounded-lg p-1.5 border border-white border-opacity-30 text-sm"
+      className={`absolute backdrop-blur-2xl shadow-2xl rounded-xl p-1.5 border min-w-[160px] ${
+        isDark ? "bg-black/80 border-gray-700" : "bg-white/20 border-white/30"
+      }`}
       style={{ left: x, top: y, zIndex: 1000 }}
     >
       <button
-        className="block w-full text-left px-3 py-1.5 rounded text-black font-medium transition-all duration-200 hover:scale-105 cursor-pointer relative group"
+        className={`block w-full text-left px-3 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105 cursor-pointer relative group ${
+          isDark
+            ? "text-white hover:bg-white/20"
+            : "text-gray-900 hover:bg-white/30"
+        }`}
         onClick={onAddNote}
       >
         <span className="relative">
@@ -88,11 +97,15 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
       </button>
 
       <button
-        className="block w-full text-left px-3 py-1.5 rounded text-black font-medium transition-all duration-200 hover:scale-105 cursor-pointer relative group"
+        className={`block w-full text-left px-3 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105 cursor-pointer relative group ${
+          isDark
+            ? "text-white hover:bg-white/20"
+            : "text-gray-900 hover:bg-white/30"
+        }`}
         onClick={handlePictureClick}
       >
         <span className="relative">
-          Add Picture
+          Add Image
           <span
             className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ease-in-out"
             style={{ backgroundColor: LOGO_BLUE }}
@@ -108,7 +121,11 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
       </button>
 
       <button
-        className="block w-full text-left px-3 py-1.5 rounded text-black font-medium transition-all duration-200 hover:scale-105 cursor-pointer relative group"
+        className={`block w-full text-left px-3 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105 cursor-pointer relative group ${
+          isDark
+            ? "text-white hover:bg-white/20"
+            : "text-gray-900 hover:bg-white/30"
+        }`}
         onClick={handleGoToOrigin}
       >
         <span className="relative">
@@ -121,19 +138,20 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
       </button>
 
       <button
-        className="block w-full text-left px-3 py-1.5 rounded text-black font-medium transition-all duration-200 hover:scale-105 cursor-pointer relative group"
+        className={`block w-full text-left px-3 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105 cursor-pointer relative group ${
+          isDark
+            ? "text-white hover:bg-white/20"
+            : "text-gray-900 hover:bg-white/30"
+        }`}
         onClick={handleToggleGrid}
       >
         <span className="relative">
           {gridState === "off"
-            ? "Show Grid"
+            ? "Grid & Snap"
             : gridState === "lines"
-            ? "Show Grid"
-            : "Grid Snap Only"}
-          <span
-            className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ease-in-out"
-            style={{ backgroundColor: LOGO_BLUE }}
-          ></span>
+            ? "Snap Only"
+            : "No Grid"}
+          <span className="absolute -right-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></span>
         </span>
       </button>
     </div>

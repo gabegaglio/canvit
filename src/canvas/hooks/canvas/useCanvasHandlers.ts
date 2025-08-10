@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAddNote } from "./useAddNote";
+import { useAddNote } from "../note/useAddNote";
 
 interface CanvasPosition {
   positionX: number;

@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { useCanvas } from "../../contexts/CanvasContext";
+import { useCanvas } from "../../../contexts/CanvasContext";
 
 interface UsePictureUploadProps {
   noteId: string;

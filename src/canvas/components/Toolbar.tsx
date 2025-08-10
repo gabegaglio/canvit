@@ -2,23 +2,43 @@ import React, { useEffect, useState } from "react";
 import AddButton from "./ToolBarButtons/AddButton";
 import HomeButton from "./ToolBarButtons/HomeButton";
 import GridButton from "./ToolBarButtons/GridButton";
+import SettingsButton from "./ToolBarButtons/SettingsButton";
 
 interface ToolbarProps {
   onAddNote?: () => void;
   onToggleGrid?: (gridState: "off" | "lines" | "snap") => void;
+  onToggleSettings?: () => void;
+  showSettings?: boolean;
+  theme: "light" | "dark";
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({ onAddNote, onToggleGrid }) => {
+const Toolbar: React.FC<ToolbarProps> = ({
+  onAddNote,
+  onToggleGrid,
+  onToggleSettings,
+  showSettings = false,
+  theme,
+}) => {
   const [visible, setVisible] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
   const [gridState, setGridState] = useState<"off" | "lines" | "snap">("off");
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      const threshold = 80; // px from bottom
-      if (window.innerHeight - e.clientY < threshold) {
+      // Bottom toolbar threshold
+      const bottomThreshold = 80; // px from bottom
+      if (window.innerHeight - e.clientY < bottomThreshold) {
         setVisible(true);
       } else {
         setVisible(false);
+      }
+
+      // Top-left settings button threshold
+      const topLeftThreshold = 120; // px from top-left corner
+      if (e.clientX < topLeftThreshold && e.clientY < topLeftThreshold) {
+        setSettingsVisible(true);
+      } else {
+        setSettingsVisible(false);
       }
     };
     window.addEventListener("mousemove", handleMouseMove);
@@ -36,15 +56,40 @@ const Toolbar: React.FC<ToolbarProps> = ({ onAddNote, onToggleGrid }) => {
   };
 
   return (
-    <div
-      className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] flex flex-row gap-4 items-end transition-all duration-300 pointer-events-none
-        ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
-      style={{ pointerEvents: visible ? "auto" : "none" }}
-    >
-      <HomeButton />
-      {onAddNote && <AddButton onClick={onAddNote} />}
-      <GridButton gridState={gridState} onClick={handleToggleGrid} />
-    </div>
+    <>
+      {/* Bottom toolbar */}
+      <div
+        className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] flex flex-row gap-4 items-end transition-all duration-300 pointer-events-none
+          ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+        style={{ pointerEvents: visible ? "auto" : "none" }}
+      >
+        <HomeButton theme={theme} />
+        {onAddNote && <AddButton onClick={onAddNote} theme={theme} />}
+        <GridButton
+          gridState={gridState}
+          onClick={handleToggleGrid}
+          theme={theme}
+        />
+      </div>
+
+      {/* Top left settings button */}
+      <div
+        className={`fixed top-8 left-8 z-[9999] transition-all duration-300 pointer-events-none
+          ${
+            settingsVisible && !showSettings
+              ? "opacity-100 translate-x-0"
+              : "opacity-0 -translate-x-4"
+          }`}
+        style={{
+          pointerEvents: settingsVisible && !showSettings ? "auto" : "none",
+        }}
+      >
+        <SettingsButton
+          onClick={onToggleSettings || (() => {})}
+          theme={theme}
+        />
+      </div>
+    </>
   );
 };
 

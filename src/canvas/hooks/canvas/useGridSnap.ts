@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { getSnapPosition, getSnapDimensions } from "../utils/gridUtils";
+import { getSnapPosition, getSnapDimensions } from "../../utils/gridUtils";
 
 interface UseGridSnapProps {
   x: number;

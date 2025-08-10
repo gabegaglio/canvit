@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
-import { useCanvas } from "../../contexts/CanvasContext";
-import { getRandomIdea } from "../../utils/ideaBank";
+import { useCanvas } from "../../../contexts/CanvasContext";
+import { getRandomIdea } from "../../../utils/ideaBank";
 
 interface UseAddNoteOptions {
   defaultPosition?: { x: number; y: number };

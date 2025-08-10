@@ -24,6 +24,7 @@
 - **Padding Size**: Adjust internal padding for notes and images
 - **Border Styles**: Choose border style (solid, dashed, dotted, none)
 - **Shadow Effects**: Add/remove drop shadows and adjust intensity
+- **Image Management**: Add/remove images from notes with context menu options
 
 ## 🎨 Visual Enhancements
 

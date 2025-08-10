@@ -6,21 +6,27 @@ const LOGO_BLUE = "#00AEEF";
 interface GridButtonProps {
   gridState: "off" | "lines" | "snap";
   onClick: () => void;
+  theme: "light" | "dark";
 }
 
-const GridButton: React.FC<GridButtonProps> = ({ gridState, onClick }) => {
+const GridButton: React.FC<GridButtonProps> = ({
+  gridState,
+  onClick,
+  theme,
+}) => {
+  const isDark = theme === "dark";
   const isActive = gridState !== "off";
 
   const getTitle = () => {
     switch (gridState) {
       case "off":
-        return "Show Grid";
+        return "Grid & Snap";
       case "lines":
-        return "Grid with Lines";
+        return "Snap Only";
       case "snap":
-        return "Grid Snap Only";
+        return "No Grid";
       default:
-        return "Show Grid";
+        return "Grid & Snap";
     }
   };
 
@@ -39,7 +45,7 @@ const GridButton: React.FC<GridButtonProps> = ({ gridState, onClick }) => {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="text-gray-600"
+            className={isDark ? "text-gray-300" : "text-gray-600"}
           >
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
           </svg>
@@ -95,7 +101,7 @@ const GridButton: React.FC<GridButtonProps> = ({ gridState, onClick }) => {
     <button
       className="glass-icon-button"
       style={{
-        backgroundColor: isActive ? `${LOGO_BLUE}20` : "white",
+        backgroundColor: isActive ? `${LOGO_BLUE}20` : "transparent",
       }}
       onClick={onClick}
       title={getTitle()}

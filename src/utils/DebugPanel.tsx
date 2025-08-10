@@ -7,7 +7,8 @@ interface DebugPanelProps {
   positionY: number;
   gridState?: "off" | "lines" | "snap";
   hasContextMenu?: boolean;
-  additionalInfo?: Record<string, any>;
+  additionalInfo?: Record<string, string | number | boolean>;
+  theme: "light" | "dark";
 }
 
 const DebugPanel: React.FC<DebugPanelProps> = ({
@@ -18,8 +19,10 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
   gridState = "off",
   hasContextMenu,
   additionalInfo = {},
+  theme,
 }) => {
   const [showDebug, setShowDebug] = useState(false);
+  const isDark = theme === "dark";
 
   if (!isEnabled) return null;
 
@@ -27,7 +30,11 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
     <>
       {/* Debug button */}
       <button
-        className="fixed bottom-4 left-4 bg-red-500 text-white px-3 py-1 rounded z-50"
+        className={`fixed bottom-4 left-4 px-3 py-1 rounded z-50 backdrop-blur-2xl shadow-2xl border transition-all duration-200 cursor-pointer ${
+          isDark
+            ? "bg-black/80 border-gray-700 text-white hover:bg-white/20"
+            : "bg-white/20 border-white/30 text-gray-900 hover:bg-white/30"
+        }`}
         onClick={() => setShowDebug(!showDebug)}
         style={{ zIndex: 9999 }}
       >
@@ -37,18 +44,34 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
       {/* Debug overlay */}
       {showDebug && (
         <div
-          className="fixed bottom-16 left-4 bg-white p-4 rounded shadow-lg z-50"
+          className={`fixed bottom-16 left-4 p-4 rounded-lg shadow-2xl z-50 backdrop-blur-2xl border min-w-[280px] ${
+            isDark
+              ? "bg-black/80 border-gray-700 text-white"
+              : "bg-white/20 border-white/30 text-gray-900"
+          }`}
           style={{ zIndex: 9999 }}
         >
-          <h3 className="font-bold mb-2">Debug Info</h3>
-          <p>Scale: {scale.toFixed(2)}</p>
-          <p>
+          <h3
+            className={`font-bold mb-2 ${
+              isDark ? "text-white" : "text-gray-900"
+            }`}
+          >
+            Debug Info
+          </h3>
+          <p className={isDark ? "text-gray-300" : "text-gray-700"}>
+            Scale: {scale.toFixed(2)}
+          </p>
+          <p className={isDark ? "text-gray-300" : "text-gray-700"}>
             Position: {positionX.toFixed(0)}, {positionY.toFixed(0)}
           </p>
-          <p>Grid: {gridState}</p>
-          <p>Context Menu: {hasContextMenu ? "Open" : "Closed"}</p>
+          <p className={isDark ? "text-gray-300" : "text-gray-700"}>
+            Grid: {gridState}
+          </p>
+          <p className={isDark ? "text-gray-300" : "text-gray-700"}>
+            Context Menu: {hasContextMenu ? "Open" : "Closed"}
+          </p>
           {Object.entries(additionalInfo).map(([key, value]) => (
-            <p key={key}>
+            <p key={key} className={isDark ? "text-gray-300" : "text-gray-700"}>
               {key}:{" "}
               {typeof value === "object"
                 ? JSON.stringify(value)
@@ -56,16 +79,20 @@ const DebugPanel: React.FC<DebugPanelProps> = ({
             </p>
           ))}
           <button
-            className="mt-2 px-2 py-1 bg-blue-500 text-white rounded"
+            className={`mt-2 px-2 py-1 rounded transition-all duration-200 cursor-pointer ${
+              isDark
+                ? "bg-blue-500 text-white hover:bg-blue-600"
+                : "bg-blue-500 text-white hover:bg-blue-600"
+            }`}
             onClick={() => {
-              console.log("Canvas state:", {
-                scale,
-                positionX,
-                positionY,
-                gridState,
-                hasContextMenu,
-                ...additionalInfo,
-              });
+              // console.log("Canvas state:", {
+              //   scale,
+              //   positionX,
+              //   positionY,
+              //   gridState,
+              //   hasContextMenu,
+              //   ...additionalInfo,
+              // });
             }}
           >
             Log to Console

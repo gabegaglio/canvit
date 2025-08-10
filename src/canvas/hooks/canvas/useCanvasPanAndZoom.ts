@@ -66,7 +66,7 @@ export function useCanvasPanAndZoom(
       if (e.ctrlKey || e.metaKey) return;
       e.preventDefault();
       const scaleFactor = 1 - e.deltaY * 0.001;
-      let nextScale = Math.max(0.1, Math.min(3, scale * scaleFactor));
+      const nextScale = Math.max(0.1, Math.min(3, scale * scaleFactor));
       const rect = container.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
