@@ -1,16 +1,15 @@
-import React, { useRef, useState } from "react";
-import { useNoteResize } from "../hooks/useNoteResize";
-import type { ResizeHandle } from "../hooks/useNoteResize";
+import React, { useState } from "react";
+import { useNoteResize, type ResizeHandle } from "../hooks/note";
 import { useElementPosition } from "../../utils/dragUtils";
 import { useDrag } from "@use-gesture/react";
-import { useGridSnap } from "../hooks/useGridSnap";
+import { useGridSnap } from "../hooks/canvas";
 import SnapGuide from "./SnapGuide";
 import { BOX_SIZE } from "../constants";
 import NoteContextMenu from "../menus/NoteContextMenu";
 import { Portal } from "../utils/PortalHelper";
-import { useNoteEditing } from "../hooks/useNoteEditing";
-import { useNoteContextMenu } from "../hooks/useNoteContextMenu";
-import { useGlobalClickHandler } from "../hooks/useGlobalClickHandler";
+import { useNoteEditing } from "../hooks/note";
+import { useNoteContextMenu } from "../hooks/note";
+import { useGlobalClickHandler } from "../hooks/ui";
 
 interface NoteProps {
   id?: string;
@@ -27,6 +26,7 @@ interface NoteProps {
   color?: string; // Background color
   image?: string; // Image URL or data URL
   onNoteRightClick?: () => void; // Callback to close canvas context menu if open
+  theme: "light" | "dark";
 }
 
 const Note: React.FC<NoteProps> = ({
@@ -44,6 +44,7 @@ const Note: React.FC<NoteProps> = ({
   color,
   image,
   onNoteRightClick,
+  theme,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isHoveringHandle, setIsHoveringHandle] = useState<ResizeHandle | null>(
@@ -170,6 +171,8 @@ const Note: React.FC<NoteProps> = ({
           height: newDimensions.height,
           x: newPosition.x,
           y: newPosition.y,
+          snapWidth: snapDimensions.width,
+          snapHeight: snapDimensions.height,
           snapX: snapPosition.x,
           snapY: snapPosition.y,
           shouldSnap: true,
@@ -180,6 +183,7 @@ const Note: React.FC<NoteProps> = ({
         height: newDimensions.height,
         x: newPosition.x,
         y: newPosition.y,
+        shouldSnap: false,
       };
     });
 
@@ -317,7 +321,9 @@ const Note: React.FC<NoteProps> = ({
             x={contextMenu.x}
             y={contextMenu.y}
             noteId={id}
+            hasImage={!!image} // Pass whether the note has an image
             onClose={handleCloseContextMenu}
+            theme={theme}
           />
         </Portal>
       )}

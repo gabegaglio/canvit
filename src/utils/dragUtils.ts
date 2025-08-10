@@ -1,5 +1,5 @@
 import { useDrag } from "@use-gesture/react";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 
 /**
  * Creates a drag handler for moving an element
@@ -75,7 +75,7 @@ export const getCursorStyle = ({
   getResizeCursor,
 }: {
   isResizing: boolean;
-  isHoveringHandle: any; // Accept any type for isHoveringHandle
+  isHoveringHandle: boolean | null; // Accept boolean or null for isHoveringHandle
   isDragging: boolean;
   getResizeCursor?: () => string | null;
 }): string => {

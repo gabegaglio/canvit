@@ -1,14 +1,13 @@
-import React, { useRef, useState } from "react";
-import { useNoteResize } from "../hooks/useNoteResize";
-import type { ResizeHandle } from "../hooks/useNoteResize";
+import React, { useState } from "react";
+import { useNoteResize, type ResizeHandle } from "../hooks/note";
 import { useElementPosition } from "../../utils/dragUtils";
 import { useDrag } from "@use-gesture/react";
-import { useGridSnap } from "../hooks/useGridSnap";
+import { useGridSnap } from "../hooks/canvas";
 import SnapGuide from "./SnapGuide";
 import { BOX_SIZE } from "../constants";
-import ImageContextMenu from "../menus/ImageContextMenu";
+import { useImageContextMenu } from "../hooks/image";
 import { Portal } from "../utils/PortalHelper";
-import { useImageContextMenu } from "../hooks/useImageContextMenu";
+import ImageContextMenu from "../menus/ImageContextMenu";
 
 interface ImageProps {
   id?: string;
@@ -23,6 +22,7 @@ interface ImageProps {
   gridState?: "off" | "lines" | "snap";
   gridSize?: number;
   onImageRightClick?: () => void;
+  theme: "light" | "dark";
 }
 
 const Image: React.FC<ImageProps> = ({
@@ -38,6 +38,7 @@ const Image: React.FC<ImageProps> = ({
   gridState = "off",
   gridSize = BOX_SIZE,
   onImageRightClick,
+  theme,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isHoveringHandle, setIsHoveringHandle] = useState<ResizeHandle | null>(
@@ -215,20 +216,6 @@ const Image: React.FC<ImageProps> = ({
         </div>
       </div>
 
-      {/* Snap guide overlay */}
-      <div
-        className={`absolute border-2 border-dashed border-blue-400 pointer-events-none transition-opacity duration-200 ${
-          showSnapGuide && gridState !== "off" ? "opacity-100" : "opacity-0"
-        }`}
-        style={{
-          left: snapPosition.x,
-          top: snapPosition.y,
-          width: snapDimensions.width,
-          height: snapDimensions.height,
-          zIndex: 10,
-        }}
-      />
-
       {/* Render context menu if open */}
       {contextMenu && id && (
         <Portal>
@@ -237,6 +224,7 @@ const Image: React.FC<ImageProps> = ({
             y={contextMenu.y}
             imageId={id}
             onClose={handleCloseContextMenu}
+            theme={theme}
           />
         </Portal>
       )}

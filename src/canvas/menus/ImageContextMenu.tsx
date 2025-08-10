@@ -1,14 +1,12 @@
 import React, { useEffect, useRef } from "react";
 import { useCanvas } from "../../contexts/CanvasContext";
 
-// Logo blue color
-const LOGO_BLUE = "#00AEEF";
-
 interface ImageContextMenuProps {
   x: number;
   y: number;
   imageId: string;
   onClose: () => void;
+  theme: "light" | "dark";
 }
 
 const ImageContextMenu: React.FC<ImageContextMenuProps> = ({
@@ -16,9 +14,11 @@ const ImageContextMenu: React.FC<ImageContextMenuProps> = ({
   y,
   imageId,
   onClose,
+  theme,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const { deleteImage } = useCanvas();
+  const isDark = theme === "dark";
 
   // Handle deleting the image
   const handleDelete = () => {
@@ -43,7 +43,9 @@ const ImageContextMenu: React.FC<ImageContextMenuProps> = ({
   return (
     <div
       ref={menuRef}
-      className="absolute bg-white bg-opacity-80 backdrop-blur-md shadow-xl rounded-lg p-1.5 border border-gray-300 text-sm z-[9999]"
+      className={`absolute backdrop-blur-2xl shadow-2xl rounded-xl p-1.5 border text-sm z-[9999] ${
+        isDark ? "bg-black/80 border-gray-700" : "bg-white/80 border-gray-300"
+      }`}
       style={{
         left: x,
         top: y,
@@ -52,10 +54,14 @@ const ImageContextMenu: React.FC<ImageContextMenuProps> = ({
       }}
     >
       <button
-        className="block w-full text-left px-3 py-1.5 rounded text-black font-medium transition-all duration-200 hover:scale-105 cursor-pointer relative group"
+        className={`block w-full text-left px-3 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105 cursor-pointer relative group ${
+          isDark
+            ? "text-red-400 hover:bg-white/20"
+            : "text-red-500 hover:bg-white/30"
+        }`}
         onClick={handleDelete}
       >
-        <span className="relative text-red-500">
+        <span className="relative">
           Delete Image
           <span
             className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ease-in-out"

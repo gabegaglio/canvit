@@ -33,7 +33,7 @@ const SnapGuide: React.FC<SnapGuideProps> = ({
         top: position.y,
         width: dimensions.width,
         height: dimensions.height,
-        zIndex: 4,
+        zIndex: 1,
         transition: "all 0.1s ease-out",
         borderColor: LOGO_BLUE,
         backgroundColor: `${LOGO_BLUE}20`, // 20 is hex for 12% opacity

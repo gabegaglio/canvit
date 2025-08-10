@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import type { ReactNode } from "react";
 
 interface Note {
   id: string;
@@ -40,6 +39,7 @@ interface CanvasContextType {
   updateImageDimensions: (id: string, width: number, height: number) => void;
   updateNoteColor: (id: string, color: string) => void;
   updateNoteImage: (id: string, image: string) => void;
+  removeNoteImage: (id: string) => void; // Added method to remove image from note
 }
 
 const CanvasContext = createContext<CanvasContextType | null>(null);
@@ -139,6 +139,14 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   };
 
+  const removeNoteImage = (id: string) => {
+    setNotes((prevNotes) =>
+      prevNotes.map((note) =>
+        note.id === id ? { ...note, image: undefined } : note
+      )
+    );
+  };
+
   return (
     <CanvasContext.Provider
       value={{
@@ -160,6 +168,7 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode }> = ({
         updateImageDimensions,
         updateNoteColor,
         updateNoteImage,
+        removeNoteImage,
       }}
     >
       {children}

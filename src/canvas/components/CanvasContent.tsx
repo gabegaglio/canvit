@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback } from "react";
 import Note from "./Note";
 import Image from "./Image";
 import { useCanvas } from "../../contexts/CanvasContext";
@@ -12,7 +12,9 @@ interface CanvasContentProps {
   logoSrc: string;
   showGrid?: boolean;
   showSnap?: boolean;
+  showLogo?: boolean;
   onCloseCanvasContextMenu?: () => void; // Callback to close canvas context menu
+  theme: "light" | "dark";
 }
 
 const CanvasContent: React.FC<CanvasContentProps> = ({
@@ -24,14 +26,15 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
   logoSrc,
   showGrid = false,
   showSnap = false,
+  showLogo = true,
   onCloseCanvasContextMenu,
+  theme,
 }) => {
   const {
     notes,
     images,
     updateNotePosition,
     updateNoteDimensions,
-    updateNote,
     updateImagePosition,
     updateImageDimensions,
   } = useCanvas();
@@ -86,6 +89,11 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
   const renderGrid = () => {
     if (!showGrid) return null;
 
+    const isDark = theme === "dark";
+    const gridColor = isDark
+      ? "rgba(255, 255, 255, 0.2)"
+      : "rgba(0, 0, 0, 0.05)";
+
     // Create a grid pattern with the boxSize
     return (
       <div className="absolute inset-0 pointer-events-none">
@@ -93,8 +101,8 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
           className="w-full h-full"
           style={{
             backgroundImage: `
-              linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)
+              linear-gradient(to right, ${gridColor} 1px, transparent 1px),
+              linear-gradient(to bottom, ${gridColor} 1px, transparent 1px)
             `,
             backgroundSize: `${boxSize}px ${boxSize}px`,
           }}
@@ -105,7 +113,7 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
 
   return (
     <div
-      className="absolute left-0 top-0 bg-white"
+      className="absolute left-0 top-0"
       style={{
         width: canvasSize,
         height: canvasSize,
@@ -117,23 +125,25 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
       {renderGrid()}
 
       {/* Center logo - positioned exactly at the center of the canvas */}
-      <img
-        src={logoSrc}
-        alt="Canvit Logo"
-        className="absolute"
-        style={{
-          left: canvasSize / 2,
-          top: canvasSize / 2,
-          width: boxSize * 3,
-          height: boxSize * 3,
-          objectFit: "contain",
-          zIndex: 1,
-          pointerEvents: "none",
-          userSelect: "none",
-          opacity: 0.8,
-          transform: "translate(-50%, -50%)", // This centers the image based on its own dimensions
-        }}
-      />
+      {showLogo && (
+        <img
+          src={logoSrc}
+          alt="Canvit Logo"
+          className="absolute"
+          style={{
+            left: canvasSize / 2,
+            top: canvasSize / 2,
+            width: boxSize * 3,
+            height: boxSize * 3,
+            objectFit: "contain",
+            zIndex: 1,
+            pointerEvents: "none",
+            userSelect: "none",
+            opacity: 0.8,
+            transform: "translate(-50%, -50%)", // This centers the image based on its own dimensions
+          }}
+        />
+      )}
 
       {/* Render images from the canvas context */}
       {images.map((image) => (
@@ -155,6 +165,7 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
           gridState={showGrid ? "lines" : showSnap ? "snap" : "off"}
           gridSize={boxSize}
           onImageRightClick={handleImageRightClick}
+          theme={theme}
         />
       ))}
 
@@ -180,6 +191,7 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
           color={note.color}
           image={note.image}
           onNoteRightClick={handleNoteRightClick}
+          theme={theme}
         />
       ))}
     </div>
