@@ -15,6 +15,8 @@ interface CanvasContentProps {
   showLogo?: boolean;
   onCloseCanvasContextMenu?: () => void; // Callback to close canvas context menu
   theme: "light" | "dark";
+  elementRadius: number;
+  elementMargin: number;
 }
 
 const CanvasContent: React.FC<CanvasContentProps> = ({
@@ -29,6 +31,8 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
   showLogo = true,
   onCloseCanvasContextMenu,
   theme,
+  elementRadius,
+  elementMargin,
 }) => {
   const {
     notes,
@@ -133,8 +137,8 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
           style={{
             left: canvasSize / 2,
             top: canvasSize / 2,
-            width: boxSize * 3,
-            height: boxSize * 3,
+            width: 150,
+            height: 150,
             objectFit: "contain",
             zIndex: 1,
             pointerEvents: "none",
@@ -166,6 +170,8 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
           gridSize={boxSize}
           onImageRightClick={handleImageRightClick}
           theme={theme}
+          radius={elementRadius}
+          margin={elementMargin}
         />
       ))}
 
@@ -192,6 +198,8 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
           image={note.image}
           onNoteRightClick={handleNoteRightClick}
           theme={theme}
+          radius={elementRadius}
+          margin={elementMargin}
         />
       ))}
     </div>

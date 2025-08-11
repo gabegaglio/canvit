@@ -5,12 +5,14 @@ const LOGO_BLUE = "#00AEEF";
 
 interface GridButtonProps {
   gridState: "off" | "lines" | "snap";
+  gridDensity?: number;
   onClick: () => void;
   theme: "light" | "dark";
 }
 
 const GridButton: React.FC<GridButtonProps> = ({
   gridState,
+  gridDensity = 50,
   onClick,
   theme,
 }) => {
@@ -18,15 +20,16 @@ const GridButton: React.FC<GridButtonProps> = ({
   const isActive = gridState !== "off";
 
   const getTitle = () => {
+    const densityText = gridDensity < 50 ? ` (${gridDensity}px)` : "";
     switch (gridState) {
       case "off":
-        return "Grid & Snap";
+        return `Grid & Snap${densityText}`;
       case "lines":
-        return "Snap Only";
+        return `Snap Only${densityText}`;
       case "snap":
-        return "No Grid";
+        return `No Grid${densityText}`;
       default:
-        return "Grid & Snap";
+        return `Grid & Snap${densityText}`;
     }
   };
 

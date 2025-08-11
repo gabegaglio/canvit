@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNoteResize, type ResizeHandle } from "../hooks/note";
-import { useElementPosition } from "../../utils/dragUtils";
+import { useElementPosition } from "../hooks/canvas";
 import { useDrag } from "@use-gesture/react";
 import { useGridSnap } from "../hooks/canvas";
 import SnapGuide from "./SnapGuide";
@@ -23,6 +23,9 @@ interface ImageProps {
   gridSize?: number;
   onImageRightClick?: () => void;
   theme: "light" | "dark";
+  radius?: number; // Border radius in pixels
+  padding?: number; // Padding in pixels
+  margin?: number; // Margin in pixels
 }
 
 const Image: React.FC<ImageProps> = ({
@@ -39,6 +42,9 @@ const Image: React.FC<ImageProps> = ({
   gridSize = BOX_SIZE,
   onImageRightClick,
   theme,
+  radius = 8,
+  padding = 0,
+  margin = 0,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isHoveringHandle, setIsHoveringHandle] = useState<ResizeHandle | null>(
@@ -163,7 +169,20 @@ const Image: React.FC<ImageProps> = ({
 
   const getCursor = () => {
     if (isResizing) return getResizeCursor() || "grab";
-    if (isHoveringHandle) return "nwse-resize";
+    if (isHoveringHandle) {
+      switch (isHoveringHandle) {
+        case "topLeft":
+          return "nwse-resize";
+        case "topRight":
+          return "nesw-resize";
+        case "bottomLeft":
+          return "nesw-resize";
+        case "bottomRight":
+          return "nwse-resize";
+        default:
+          return "nwse-resize";
+      }
+    }
     if (isDragging) return "grabbing";
     return "grab";
   };
@@ -178,6 +197,8 @@ const Image: React.FC<ImageProps> = ({
     userSelect: "none" as const,
     touchAction: "none" as const,
     position: "absolute" as const,
+    backgroundColor: "transparent",
+    border: "none",
   };
 
   return (
@@ -188,31 +209,81 @@ const Image: React.FC<ImageProps> = ({
         show={showSnapGuide && gridState !== "off"}
       />
       <div
-        className={`image-container backdrop-blur-lg rounded-lg shadow-lg relative ${className}`}
-        style={combinedStyle}
+        className={`image-container relative ${className}`}
+        style={{
+          ...combinedStyle,
+          borderRadius: `${radius}px`,
+          padding: `${padding}px`,
+        }}
         {...bindDrag()}
         onContextMenu={handleRightClick}
       >
         <img
           src={src}
           alt="Canvas image"
-          className="w-full h-full object-cover rounded-lg"
+          className="w-full h-full object-cover"
+          style={{
+            borderRadius: `${radius}px`,
+            position: "absolute",
+            left: `${margin}px`,
+            top: `${margin}px`,
+            width: `calc(100% - ${margin * 2}px)`,
+            height: `calc(100% - ${margin * 2}px)`,
+          }}
           draggable={false}
         />
 
-        {/* Resize handle */}
+        {/* Resize handles on all four corners */}
+        {/* Top-left corner */}
         <div
-          className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize z-10"
+          className="absolute w-3 h-3 cursor-nwse-resize z-10 opacity-0 hover:opacity-100 transition-opacity"
+          style={{
+            left: `${margin + 2}px`,
+            top: `${margin + 2}px`,
+            touchAction: "none",
+          }}
+          {...createHandleProps("topLeft")}
+        >
+          <div className="w-full h-full bg-white/80 rounded-sm border border-gray-300/50"></div>
+        </div>
+
+        {/* Top-right corner */}
+        <div
+          className="absolute w-3 h-3 cursor-nesw-resize z-10 opacity-0 hover:opacity-100 transition-opacity"
+          style={{
+            right: `${margin + 2}px`,
+            top: `${margin + 2}px`,
+            touchAction: "none",
+          }}
+          {...createHandleProps("topRight")}
+        >
+          <div className="w-full h-full bg-white/80 rounded-sm border border-gray-300/50"></div>
+        </div>
+
+        {/* Bottom-left corner */}
+        <div
+          className="absolute w-3 h-3 cursor-nesw-resize z-10 opacity-0 hover:opacity-100 transition-opacity"
+          style={{
+            left: `${margin + 2}px`,
+            bottom: `${margin + 2}px`,
+            touchAction: "none",
+          }}
+          {...createHandleProps("bottomLeft")}
+        >
+          <div className="w-full h-full bg-white/80 rounded-sm border border-gray-300/50"></div>
+        </div>
+
+        {/* Bottom-right corner */}
+        <div
+          className="absolute w-3 h-3 cursor-nwse-resize z-10 opacity-0 hover:opacity-100 transition-opacity"
+          style={{
+            right: `${margin + 2}px`,
+            bottom: `${margin + 2}px`,
+            touchAction: "none",
+          }}
           {...createHandleProps("bottomRight")}
         >
-          <svg
-            className="w-full h-full opacity-50"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            style={{ color: "black" }}
-          >
-            <path d="M22,22H20V20H22V22M22,18H20V16H22V18M18,22H16V20H18V22M18,18H16V16H18V18M14,22H12V20H14V22M22,14H20V12H22V14Z" />
-          </svg>
+          <div className="w-full h-full bg-white/80 rounded-sm border border-gray-300/50"></div>
         </div>
       </div>
 
