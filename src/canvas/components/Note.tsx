@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNoteResize, type ResizeHandle } from "../hooks/note";
-import { useElementPosition } from "../../utils/dragUtils";
+import { useElementPosition } from "../hooks/canvas";
 import { useDrag } from "@use-gesture/react";
 import { useGridSnap } from "../hooks/canvas";
 import SnapGuide from "./SnapGuide";
@@ -27,6 +27,9 @@ interface NoteProps {
   image?: string; // Image URL or data URL
   onNoteRightClick?: () => void; // Callback to close canvas context menu if open
   theme: "light" | "dark";
+  radius?: number; // Border radius in pixels
+  padding?: number; // Padding in pixels
+  margin?: number; // Margin in pixels
 }
 
 const Note: React.FC<NoteProps> = ({
@@ -45,6 +48,9 @@ const Note: React.FC<NoteProps> = ({
   image,
   onNoteRightClick,
   theme,
+  radius = 8,
+  padding = 16,
+  margin = 0,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isHoveringHandle, setIsHoveringHandle] = useState<ResizeHandle | null>(
@@ -198,7 +204,20 @@ const Note: React.FC<NoteProps> = ({
   const getCursor = () => {
     if (isEditing) return "text";
     if (isResizing) return getResizeCursor() || "grab";
-    if (isHoveringHandle) return "nwse-resize";
+    if (isHoveringHandle) {
+      switch (isHoveringHandle) {
+        case "topLeft":
+          return "nwse-resize";
+        case "topRight":
+          return "nesw-resize";
+        case "bottomLeft":
+          return "nesw-resize";
+        case "bottomRight":
+          return "nwse-resize";
+        default:
+          return "nwse-resize";
+      }
+    }
     if (isDragging) return "grabbing";
     return "grab";
   };
@@ -214,7 +233,7 @@ const Note: React.FC<NoteProps> = ({
     userSelect: isEditing ? ("text" as const) : ("none" as const),
     touchAction: "none" as const,
     position: "absolute" as const,
-    backgroundColor: color || "white",
+    border: "none",
   };
 
   // Check if content is empty
@@ -232,8 +251,12 @@ const Note: React.FC<NoteProps> = ({
       {/* Note container */}
       <div
         ref={noteRef}
-        className={`note-container backdrop-blur-lg rounded-lg shadow-lg relative ${className}`}
-        style={combinedStyle}
+        className={`note-container shadow-lg relative ${className}`}
+        style={{
+          ...combinedStyle,
+          borderRadius: `${radius}px`,
+          backgroundColor: color || "white",
+        }}
         {...bindDrag()}
         onContextMenu={handleRightClick}
         onDoubleClick={handleDoubleClick}
@@ -241,13 +264,30 @@ const Note: React.FC<NoteProps> = ({
         {/* Background image if provided */}
         {image && (
           <div
-            className="absolute inset-0 bg-center bg-cover bg-no-repeat rounded-lg opacity-75 z-0"
-            style={{ backgroundImage: `url(${image})` }}
+            className="absolute inset-0 bg-center bg-cover bg-no-repeat opacity-75 z-0"
+            style={{
+              backgroundImage: `url(${image})`,
+              borderRadius: `${radius}px`,
+              left: `${margin}px`,
+              top: `${margin}px`,
+              width: `calc(100% - ${margin * 2}px)`,
+              height: `calc(100% - ${margin * 2}px)`,
+            }}
           />
         )}
 
-        {/* Inner content container with padding */}
-        <div className="p-4 w-full h-full overflow-hidden relative z-10">
+        {/* Inner content container with dynamic padding */}
+        <div
+          className="w-full h-full overflow-hidden relative z-10"
+          style={{
+            padding: `${padding}px`,
+            position: "absolute",
+            left: `${margin}px`,
+            top: `${margin}px`,
+            width: `calc(100% - ${margin * 2}px)`,
+            height: `calc(100% - ${margin * 2}px)`,
+          }}
+        >
           {isEditing ? (
             <textarea
               ref={textareaRef}
@@ -298,19 +338,57 @@ const Note: React.FC<NoteProps> = ({
           )}
         </div>
 
-        {/* Single resize handle in the bottom right corner */}
+        {/* Resize handles on all four corners */}
+        {/* Top-left corner */}
         <div
-          className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize z-10"
+          className="absolute w-3 h-3 cursor-nwse-resize z-10 opacity-0 hover:opacity-100 transition-opacity"
+          style={{
+            left: `${margin + 2}px`,
+            top: `${margin + 2}px`,
+            touchAction: "none",
+          }}
+          {...createHandleProps("topLeft")}
+        >
+          <div className="w-full h-full bg-white/80 rounded-sm border border-gray-300/50"></div>
+        </div>
+
+        {/* Top-right corner */}
+        <div
+          className="absolute w-3 h-3 cursor-nesw-resize z-10 opacity-0 hover:opacity-100 transition-opacity"
+          style={{
+            right: `${margin + 2}px`,
+            top: `${margin + 2}px`,
+            touchAction: "none",
+          }}
+          {...createHandleProps("topRight")}
+        >
+          <div className="w-full h-full bg-white/80 rounded-sm border border-gray-300/50"></div>
+        </div>
+
+        {/* Bottom-left corner */}
+        <div
+          className="absolute w-3 h-3 cursor-nesw-resize z-10 opacity-0 hover:opacity-100 transition-opacity"
+          style={{
+            left: `${margin + 2}px`,
+            bottom: `${margin + 2}px`,
+            touchAction: "none",
+          }}
+          {...createHandleProps("bottomLeft")}
+        >
+          <div className="w-full h-full bg-white/80 rounded-sm border border-gray-300/50"></div>
+        </div>
+
+        {/* Bottom-right corner */}
+        <div
+          className="absolute w-3 h-3 cursor-nwse-resize z-10 opacity-0 hover:opacity-100 transition-opacity"
+          style={{
+            right: `${margin + 2}px`,
+            bottom: `${margin + 2}px`,
+            touchAction: "none",
+          }}
           {...createHandleProps("bottomRight")}
         >
-          <svg
-            className="w-full h-full opacity-50"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            style={{ color: color && color !== "white" ? "black" : "black" }}
-          >
-            <path d="M22,22H20V20H22V22M22,18H20V16H22V18M18,22H16V20H18V22M18,18H16V16H18V18M14,22H12V20H14V22M22,14H20V12H22V14Z" />
-          </svg>
+          <div className="w-full h-full bg-white/80 rounded-sm border border-gray-300/50"></div>
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useDrag } from "@use-gesture/react";
 
 // Define resize handle positions
@@ -62,6 +62,7 @@ export function useNoteResize({
 
   // Starting values for the current resize operation
   const startDimensions = useRef({ width: 0, height: 0 });
+  const startPosition = useRef({ x: 0, y: 0 }); // Add starting position tracking
   // Track the latest dimensions for smooth updates
   const latestDimensions = useRef({
     width: initialWidth,
@@ -69,7 +70,7 @@ export function useNoteResize({
   });
 
   // Calculate the minimum width based on content - only for long words
-  const calculateMinWidth = () => {
+  const calculateMinWidth = useCallback(() => {
     if (!content) return MIN_SIZE;
 
     // Find the longest word in the content
@@ -89,24 +90,27 @@ export function useNoteResize({
     );
 
     return wordBasedMinWidth;
-  };
+  }, [content]);
 
-  const updateDimensions = (width: number, height: number) => {
-    // Calculate minimum width based on content
-    const minWidth = calculateMinWidth();
+  const updateDimensions = useCallback(
+    (width: number, height: number) => {
+      // Calculate minimum width based on content
+      const minWidth = calculateMinWidth();
 
-    // Apply minimum constraints
-    const newWidth = Math.max(width, minWidth);
-    const newHeight = Math.max(height, MIN_SIZE);
+      // Apply minimum constraints
+      const newWidth = Math.max(width, minWidth);
+      const newHeight = Math.max(height, MIN_SIZE);
 
-    // Update state
-    setDimensions({ width: newWidth, height: newHeight });
-    latestDimensions.current = { width: newWidth, height: newHeight };
-  };
+      // Update state
+      setDimensions({ width: newWidth, height: newHeight });
+      latestDimensions.current = { width: newWidth, height: newHeight };
+    },
+    [calculateMinWidth]
+  );
 
-  const updatePosition = (x: number, y: number) => {
+  const updatePosition = useCallback((x: number, y: number) => {
     setPosition({ x, y });
-  };
+  }, []);
 
   const bindResize = (
     handle: ResizeHandle,
@@ -115,8 +119,10 @@ export function useNoteResize({
       position: { x: number; y: number }
     ) => ResizeCallbackData | void
   ) => {
-    // We only support bottomRight resize now
-    if (handle !== "bottomRight") {
+    // We support all corner resize handles now
+    if (
+      !["topLeft", "topRight", "bottomLeft", "bottomRight"].includes(handle)
+    ) {
       return () => ({});
     }
 
@@ -125,6 +131,7 @@ export function useNoteResize({
         // When starting a resize, capture initial values
         if (first) {
           startDimensions.current = { ...latestDimensions.current };
+          startPosition.current = { ...position }; // Capture starting position
           setIsResizing(true);
           setCurrentHandle(handle);
         }
@@ -133,27 +140,86 @@ export function useNoteResize({
         const adjustedMx = mx / scale;
         const adjustedMy = my / scale;
 
-        // Calculate new dimensions (only grows from bottom-right)
+        // Calculate new dimensions based on which handle is being dragged
         const minWidth = calculateMinWidth();
-        const newWidth = Math.max(
-          minWidth,
-          startDimensions.current.width + adjustedMx
-        );
-        const newHeight = Math.max(
-          MIN_SIZE,
-          startDimensions.current.height + adjustedMy
-        );
+        let newWidth = startDimensions.current.width;
+        let newHeight = startDimensions.current.height;
+        let newX = position.x;
+        let newY = position.y;
+
+        switch (handle) {
+          case "topLeft":
+            // Resize from top-left: adjust width, height, x, y
+            newWidth = Math.max(
+              minWidth,
+              startDimensions.current.width - adjustedMx
+            );
+            newHeight = Math.max(
+              MIN_SIZE,
+              startDimensions.current.height - adjustedMy
+            );
+            newX =
+              startPosition.current.x +
+              (startDimensions.current.width - newWidth);
+            newY =
+              startPosition.current.y +
+              (startDimensions.current.height - newHeight);
+            break;
+          case "topRight":
+            // Resize from top-right: adjust width, height, y
+            newWidth = Math.max(
+              minWidth,
+              startDimensions.current.width + adjustedMx
+            );
+            newHeight = Math.max(
+              MIN_SIZE,
+              startDimensions.current.height - adjustedMy
+            );
+            newX = startPosition.current.x; // Keep original x position
+            newY =
+              startPosition.current.y +
+              (startDimensions.current.height - newHeight);
+            break;
+          case "bottomLeft":
+            // Resize from bottom-left: adjust width, height, x
+            newWidth = Math.max(
+              minWidth,
+              startDimensions.current.width - adjustedMx
+            );
+            newHeight = Math.max(
+              MIN_SIZE,
+              startDimensions.current.height + adjustedMy
+            );
+            newX =
+              startPosition.current.x +
+              (startDimensions.current.width - newWidth);
+            newY = startPosition.current.y; // Keep original y position
+            break;
+          case "bottomRight":
+            // Resize from bottom-right: adjust width, height (original behavior)
+            newWidth = Math.max(
+              minWidth,
+              startDimensions.current.width + adjustedMx
+            );
+            newHeight = Math.max(
+              MIN_SIZE,
+              startDimensions.current.height + adjustedMy
+            );
+            newX = startPosition.current.x; // Keep original x position
+            newY = startPosition.current.y; // Keep original y position
+            break;
+        }
 
         // Get grid snapping data if callback provided
         let finalWidth = newWidth;
         let finalHeight = newHeight;
-        let finalX = position.x;
-        let finalY = position.y;
+        let finalX = newX;
+        let finalY = newY;
 
         if (resizeCallback) {
           const callbackData = resizeCallback(
             { width: newWidth, height: newHeight },
-            { x: position.x, y: position.y }
+            { x: newX, y: newY }
           );
 
           if (callbackData) {
@@ -168,8 +234,8 @@ export function useNoteResize({
               // Final snap at the end of resize
               finalWidth = callbackData.snapWidth;
               finalHeight = callbackData.snapHeight;
-              finalX = callbackData.snapX ?? position.x;
-              finalY = callbackData.snapY ?? position.y;
+              finalX = callbackData.snapX ?? newX;
+              finalY = callbackData.snapY ?? newY;
             } else {
               // Show actual position for smooth movement during resize
               finalWidth = callbackData.width;
@@ -214,7 +280,18 @@ export function useNoteResize({
   };
 
   const getResizeCursor = () => {
-    return currentHandle === "bottomRight" ? "nwse-resize" : null;
+    switch (currentHandle) {
+      case "topLeft":
+        return "nwse-resize";
+      case "topRight":
+        return "nesw-resize";
+      case "bottomLeft":
+        return "nesw-resize";
+      case "bottomRight":
+        return "nwse-resize";
+      default:
+        return null;
+    }
   };
 
   return {

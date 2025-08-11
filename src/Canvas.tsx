@@ -24,6 +24,11 @@ function CanvasInner() {
   const [showLogo, setShowLogo] = useState<boolean>(true);
   const [showSettings, setShowSettings] = useState(false);
 
+  // New state for note/image styling
+  const [elementRadius, setElementRadius] = useState<number>(8); // Default: rounded-lg (8px) - shared for both notes and images
+  const [elementMargin, setElementMargin] = useState<number>(0); // Default: no margin - shared for both notes and images
+  const [gridDensity, setGridDensity] = useState<number>(50); // Default: 50px grid size (current BOX_SIZE)
+
   // Use canvas handlers for context menu and note adding
   const {
     contextMenu,
@@ -91,6 +96,28 @@ function CanvasInner() {
     });
   };
 
+  // Functions to update radius and margin
+  const updateElementRadius = (radius: number) => {
+    setElementRadius(radius);
+  };
+
+  const updateElementMargin = (margin: number) => {
+    setElementMargin(margin);
+  };
+
+  const updateGridDensity = (density: number) => {
+    setGridDensity(density);
+  };
+
+  // Reset functions that set specific values instead of toggling
+  const resetThemeToLight = () => {
+    setTheme("light");
+  };
+
+  const resetLogoToOn = () => {
+    setShowLogo(true);
+  };
+
   // Simple settings toggle
   const toggleSettings = () => {
     setShowSettings((prev) => !prev);
@@ -104,6 +131,7 @@ function CanvasInner() {
         onToggleSettings={toggleSettings}
         showSettings={showSettings}
         theme={theme}
+        gridDensity={gridDensity}
       />
       <ZoomIndicator scale={scale} theme={theme} />
       {/* Debug panel - disabled by default */}
@@ -137,13 +165,15 @@ function CanvasInner() {
           positionY={positionY}
           scale={scale}
           canvasSize={CANVAS_SIZE}
-          boxSize={BOX_SIZE}
+          boxSize={gridDensity}
           logoSrc={canvitLogo}
           showGrid={gridState === "lines"}
           showSnap={gridState === "snap"}
           showLogo={showLogo}
           onCloseCanvasContextMenu={handleCloseContextMenu}
           theme={theme}
+          elementRadius={elementRadius}
+          elementMargin={elementMargin}
         />
       </div>
 
@@ -161,11 +191,19 @@ function CanvasInner() {
 
       {showSettings && (
         <SettingsMenu
-          closeSettings={() => setShowSettings(false)}
+          closeSettings={toggleSettings}
           theme={theme}
           onThemeToggle={toggleTheme}
-          showLogo={showLogo}
           onLogoToggle={toggleLogo}
+          showLogo={showLogo}
+          elementRadius={elementRadius}
+          elementMargin={elementMargin}
+          gridDensity={gridDensity}
+          onElementRadiusChange={updateElementRadius}
+          onElementMarginChange={updateElementMargin}
+          onGridDensityChange={updateGridDensity}
+          onResetTheme={resetThemeToLight}
+          onResetLogo={resetLogoToOn}
         />
       )}
     </>

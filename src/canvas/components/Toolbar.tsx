@@ -10,6 +10,7 @@ interface ToolbarProps {
   onToggleSettings?: () => void;
   showSettings?: boolean;
   theme: "light" | "dark";
+  gridDensity?: number;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -18,6 +19,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onToggleSettings,
   showSettings = false,
   theme,
+  gridDensity = 50,
 }) => {
   const [visible, setVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -69,6 +71,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
           gridState={gridState}
           onClick={handleToggleGrid}
           theme={theme}
+          gridDensity={gridDensity}
         />
       </div>
 
