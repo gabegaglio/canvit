@@ -51,21 +51,72 @@ export function useCanvasPictureUpload({
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target && typeof event.target.result === "string") {
-          // Convert screen coordinates to canvas coordinates
-          // The formula accounts for canvas position and scale
-          const canvasX = (positionX - canvasPositionX) / scale;
-          const canvasY = (positionY - canvasPositionY) / scale;
+          // Create a temporary image to get dimensions
+          const img = new window.Image();
+          img.onload = () => {
+            // Convert screen coordinates to canvas coordinates
+            // The formula accounts for canvas position and scale
+            const canvasX = (positionX - canvasPositionX) / scale;
+            const canvasY = (positionY - canvasPositionY) / scale;
 
-          // Add an image with the picture
-          addImage({
-            x: canvasX,
-            y: canvasY,
-            width: 300,
-            height: 200,
-            src: event.target.result,
-          });
+            // Get the actual image dimensions
+            const naturalWidth = img.naturalWidth;
+            const naturalHeight = img.naturalHeight;
 
-          onClose();
+            // Use actual dimensions if available, otherwise fallback
+            let finalWidth = naturalWidth || 300;
+            let finalHeight = naturalHeight || 200;
+
+            // Scale down very large images while maintaining aspect ratio
+            const maxWidth = 600;
+            const maxHeight = 450;
+
+            if (finalWidth > maxWidth || finalHeight > maxHeight) {
+              const aspectRatio = finalWidth / finalHeight;
+              if (aspectRatio > maxWidth / maxHeight) {
+                finalWidth = maxWidth;
+                finalHeight = finalWidth / aspectRatio;
+              } else {
+                finalHeight = maxHeight;
+                finalWidth = finalHeight * aspectRatio;
+              }
+            }
+
+            // Round to whole pixels
+            finalWidth = Math.round(finalWidth);
+            finalHeight = Math.round(finalHeight);
+
+            // Add an image with proper dimensions
+            addImage({
+              x: canvasX,
+              y: canvasY,
+              width: finalWidth,
+              height: finalHeight,
+              src: event.target.result,
+            });
+
+            onClose();
+          };
+
+          img.onerror = () => {
+            console.error("Failed to load image for dimension calculation");
+            // Fallback to default dimensions
+            const canvasX = (positionX - canvasPositionX) / scale;
+            const canvasY = (positionY - canvasPositionY) / scale;
+
+            addImage({
+              x: canvasX,
+              y: canvasY,
+              width: 300,
+              height: 200,
+              src: event.target.result,
+            });
+            onClose();
+          };
+
+          if (event.target && typeof event.target.result === "string") {
+            img.src = event.target.result;
+          }
         }
       };
       reader.readAsDataURL(file);

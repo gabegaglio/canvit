@@ -26,8 +26,8 @@ function CanvasInner() {
 
   // New state for note/image styling
   const [elementRadius, setElementRadius] = useState<number>(8); // Default: rounded-lg (8px) - shared for both notes and images
-  const [elementMargin, setElementMargin] = useState<number>(0); // Default: no margin - shared for both notes and images
-  const [gridDensity, setGridDensity] = useState<number>(50); // Default: 50px grid size (current BOX_SIZE)
+  const [noteMargin, setNoteMargin] = useState<number>(0); // Default: no margin
+  const [imageMargin, setImageMargin] = useState<number>(0); // Default: no margin
 
   // Use canvas handlers for context menu and note adding
   const {
@@ -96,31 +96,35 @@ function CanvasInner() {
     });
   };
 
-  // Functions to update radius and margin
-  const updateElementRadius = (radius: number) => {
+  // Functions to update radius and padding
+  const updateNoteRadius = (radius: number) => {
     setElementRadius(radius);
   };
 
-  const updateElementMargin = (margin: number) => {
-    setElementMargin(margin);
+  const updateImageRadius = (radius: number) => {
+    setElementRadius(radius);
   };
 
-  const updateGridDensity = (density: number) => {
-    setGridDensity(density);
+  const updateNoteMargin = (margin: number) => {
+    setNoteMargin(margin);
   };
 
-  // Reset functions that set specific values instead of toggling
-  const resetThemeToLight = () => {
-    setTheme("light");
-  };
-
-  const resetLogoToOn = () => {
-    setShowLogo(true);
+  const updateImageMargin = (margin: number) => {
+    setImageMargin(margin);
   };
 
   // Simple settings toggle
   const toggleSettings = () => {
     setShowSettings((prev) => !prev);
+  };
+
+  // Reset all settings to defaults
+  const resetSettings = () => {
+    setTheme("light");
+    setShowLogo(true);
+    setElementRadius(8);
+    setNoteMargin(0);
+    setImageMargin(0);
   };
 
   return (
@@ -131,7 +135,6 @@ function CanvasInner() {
         onToggleSettings={toggleSettings}
         showSettings={showSettings}
         theme={theme}
-        gridDensity={gridDensity}
       />
       <ZoomIndicator scale={scale} theme={theme} />
       {/* Debug panel - disabled by default */}
@@ -148,13 +151,13 @@ function CanvasInner() {
       <div
         ref={containerRef}
         className={`w-full h-full overflow-hidden relative transition-colors duration-200 ${
-          theme === "dark" ? "bg-black text-white" : "bg-white text-gray-900"
+          theme === "dark" ? "text-white" : "text-gray-900"
         }`}
         style={{
           minHeight: "100vh",
           minWidth: "100vw",
           touchAction: "none",
-          backgroundColor: theme === "dark" ? "#000000" : "#ffffff", // Force inline style
+          backgroundColor: theme === "dark" ? "#000000" : "transparent", // Make background transparent
           color: theme === "dark" ? "#ffffff" : "#111827", // Force text color
         }}
         onClick={handleCanvasClick}
@@ -165,7 +168,7 @@ function CanvasInner() {
           positionY={positionY}
           scale={scale}
           canvasSize={CANVAS_SIZE}
-          boxSize={gridDensity}
+          boxSize={BOX_SIZE}
           logoSrc={canvitLogo}
           showGrid={gridState === "lines"}
           showSnap={gridState === "snap"}
@@ -173,7 +176,8 @@ function CanvasInner() {
           onCloseCanvasContextMenu={handleCloseContextMenu}
           theme={theme}
           elementRadius={elementRadius}
-          elementMargin={elementMargin}
+          noteMargin={noteMargin}
+          imageMargin={imageMargin}
         />
       </div>
 
@@ -191,19 +195,18 @@ function CanvasInner() {
 
       {showSettings && (
         <SettingsMenu
-          closeSettings={toggleSettings}
+          closeSettings={() => setShowSettings(false)}
           theme={theme}
           onThemeToggle={toggleTheme}
-          onLogoToggle={toggleLogo}
           showLogo={showLogo}
+          onLogoToggle={toggleLogo}
           elementRadius={elementRadius}
-          elementMargin={elementMargin}
-          gridDensity={gridDensity}
-          onElementRadiusChange={updateElementRadius}
-          onElementMarginChange={updateElementMargin}
-          onGridDensityChange={updateGridDensity}
-          onResetTheme={resetThemeToLight}
-          onResetLogo={resetLogoToOn}
+          noteMargin={noteMargin}
+          imageMargin={imageMargin}
+          onElementRadiusChange={updateNoteRadius}
+          onNoteMarginChange={updateNoteMargin}
+          onImageMarginChange={updateImageMargin}
+          onResetSettings={resetSettings}
         />
       )}
     </>

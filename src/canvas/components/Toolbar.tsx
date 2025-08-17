@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import AddButton from "./ToolBarButtons/AddButton";
+import AddImageButton from "./ToolBarButtons/AddImageButton";
 import HomeButton from "./ToolBarButtons/HomeButton";
 import GridButton from "./ToolBarButtons/GridButton";
 import SettingsButton from "./ToolBarButtons/SettingsButton";
@@ -10,7 +11,6 @@ interface ToolbarProps {
   onToggleSettings?: () => void;
   showSettings?: boolean;
   theme: "light" | "dark";
-  gridDensity?: number;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -19,15 +19,14 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onToggleSettings,
   showSettings = false,
   theme,
-  gridDensity = 50,
 }) => {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(true);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [gridState, setGridState] = useState<"off" | "lines" | "snap">("off");
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      // Bottom toolbar threshold
+      // Bottom toolbar threshold - show when near bottom of screen
       const bottomThreshold = 80; // px from bottom
       if (window.innerHeight - e.clientY < bottomThreshold) {
         setVisible(true);
@@ -59,20 +58,48 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
   return (
     <>
-      {/* Bottom toolbar */}
+      {/* Bottom horizontal toolbar */}
       <div
-        className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] flex flex-row gap-4 items-end transition-all duration-300 pointer-events-none
+        className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] transition-all duration-300 pointer-events-none
           ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
         style={{ pointerEvents: visible ? "auto" : "none" }}
       >
-        <HomeButton theme={theme} />
-        {onAddNote && <AddButton onClick={onAddNote} theme={theme} />}
-        <GridButton
-          gridState={gridState}
-          onClick={handleToggleGrid}
-          theme={theme}
-          gridDensity={gridDensity}
-        />
+        {/* Modern horizontal toolbar */}
+        <div
+          className={`backdrop-blur-xl shadow-lg hover:shadow-xl transition-all duration-300 flex flex-row items-center px-4 py-2 rounded-lg ${
+            theme === "dark"
+              ? "bg-black/80 border border-white/20"
+              : "bg-white/95 border border-black/10"
+          }`}
+        >
+          <HomeButton theme={theme} />
+
+          {/* Separator */}
+          <div
+            className={`w-px h-6 mx-3 ${
+              theme === "dark" ? "bg-white/20" : "bg-black/20"
+            }`}
+          />
+
+          {/* Add buttons group */}
+          <div className="flex flex-row gap-2">
+            {onAddNote && <AddButton onClick={onAddNote} theme={theme} />}
+            <AddImageButton onClick={() => {}} theme={theme} />
+          </div>
+
+          {/* Separator */}
+          <div
+            className={`w-px h-6 mx-3 ${
+              theme === "dark" ? "bg-white/20" : "bg-black/20"
+            }`}
+          />
+
+          <GridButton
+            gridState={gridState}
+            onClick={handleToggleGrid}
+            theme={theme}
+          />
+        </div>
       </div>
 
       {/* Top left settings button */}

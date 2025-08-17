@@ -4,7 +4,10 @@ import "./index.css";
 import App from "./App.tsx";
 import { AuthProvider } from "./contexts/AuthContext";
 
-createRoot(document.getElementById("root")!).render(
+const rootElement = document.getElementById("root")!;
+rootElement.style.backgroundColor = "#ffffff"; // Ensure white background
+
+createRoot(rootElement).render(
   <StrictMode>
     <AuthProvider>
       <App />

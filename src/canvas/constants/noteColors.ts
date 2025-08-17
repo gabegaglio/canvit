@@ -16,7 +16,7 @@ export const NOTE_COLORS: NoteColorOption[] = [
   {
     id: "default",
     name: "Default",
-    value: "white",
+    value: "#f8f9fa",
     textColor: "black",
   },
   {
