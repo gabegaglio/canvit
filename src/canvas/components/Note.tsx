@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { useNoteResize, type ResizeHandle } from "../hooks/note";
-import { useElementPosition } from "../hooks/canvas";
+import { useNoteResize } from "../hooks/note";
+import { useElementPosition } from "../../utils/dragUtils";
 import { useDrag } from "@use-gesture/react";
 import { useGridSnap } from "../hooks/canvas";
 import SnapGuide from "./SnapGuide";
@@ -29,7 +29,6 @@ interface NoteProps {
   theme: "light" | "dark";
   radius?: number; // Border radius in pixels
   padding?: number; // Padding in pixels
-  margin?: number; // Margin in pixels
 }
 
 const Note: React.FC<NoteProps> = ({
@@ -50,12 +49,10 @@ const Note: React.FC<NoteProps> = ({
   theme,
   radius = 8,
   padding = 16,
-  margin = 0,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
-  const [isHoveringHandle, setIsHoveringHandle] = useState<ResizeHandle | null>(
-    null
-  );
+
+  const [isHoveringNote, setIsHoveringNote] = useState(false);
 
   // Use custom hooks
   const {
@@ -123,8 +120,8 @@ const Note: React.FC<NoteProps> = ({
   // Set up the drag gesture for moving the note - disabled when resizing
   const bindDrag = useDrag(
     ({ movement: [mx, my], first, last, memo, event, type }) => {
-      // Don't drag if we're resizing, hovering over a resize handle, or editing
-      if (isResizing || isHoveringHandle || isEditing) return;
+      // Don't drag if we're resizing or editing
+      if (isResizing || isEditing) return;
 
       // Skip right-click dragging (only handle left mouse button)
       if (type === "mousedown" && (event as MouseEvent).button !== 0) return;
@@ -168,56 +165,41 @@ const Note: React.FC<NoteProps> = ({
     }
   );
 
-  // Wrapper for resize bindings to track handle hover state
-  const createHandleProps = (handle: ResizeHandle) => {
-    const resizeBindings = bindResize(handle, (newDimensions, newPosition) => {
-      if (gridState !== "off" && !isDragging) {
+  // Wrapper for resize bindings
+  const createHandleProps = () => {
+    const resizeBindings = bindResize(
+      "bottomRight",
+      (newDimensions, newPosition) => {
+        if (gridState !== "off" && !isDragging) {
+          return {
+            width: newDimensions.width,
+            height: newDimensions.height,
+            x: newPosition.x,
+            y: newPosition.y,
+            snapWidth: snapDimensions.width,
+            snapHeight: snapDimensions.height,
+            snapX: snapPosition.x,
+            snapY: snapPosition.y,
+            shouldSnap: true,
+          };
+        }
         return {
           width: newDimensions.width,
           height: newDimensions.height,
           x: newPosition.x,
           y: newPosition.y,
-          snapWidth: snapDimensions.width,
-          snapHeight: snapDimensions.height,
-          snapX: snapPosition.x,
-          snapY: snapPosition.y,
-          shouldSnap: true,
+          shouldSnap: false,
         };
       }
-      return {
-        width: newDimensions.width,
-        height: newDimensions.height,
-        x: newPosition.x,
-        y: newPosition.y,
-        shouldSnap: false,
-      };
-    });
+    );
 
-    return {
-      ...resizeBindings(),
-      onMouseEnter: () => setIsHoveringHandle(handle),
-      onMouseLeave: () => setIsHoveringHandle(null),
-    };
+    return resizeBindings();
   };
 
   // Determine cursor based on interaction state
   const getCursor = () => {
     if (isEditing) return "text";
     if (isResizing) return getResizeCursor() || "grab";
-    if (isHoveringHandle) {
-      switch (isHoveringHandle) {
-        case "topLeft":
-          return "nwse-resize";
-        case "topRight":
-          return "nesw-resize";
-        case "bottomLeft":
-          return "nesw-resize";
-        case "bottomRight":
-          return "nwse-resize";
-        default:
-          return "nwse-resize";
-      }
-    }
     if (isDragging) return "grabbing";
     return "grab";
   };
@@ -233,7 +215,8 @@ const Note: React.FC<NoteProps> = ({
     userSelect: isEditing ? ("text" as const) : ("none" as const),
     touchAction: "none" as const,
     position: "absolute" as const,
-    border: "none",
+    backgroundColor: color || "#f8f9fa",
+    zIndex: 5,
   };
 
   // Check if content is empty
@@ -251,15 +234,16 @@ const Note: React.FC<NoteProps> = ({
       {/* Note container */}
       <div
         ref={noteRef}
-        className={`note-container shadow-lg relative ${className}`}
+        className={`note-container backdrop-blur-lg shadow-lg relative ${className}`}
         style={{
           ...combinedStyle,
           borderRadius: `${radius}px`,
-          backgroundColor: color || "white",
         }}
         {...bindDrag()}
         onContextMenu={handleRightClick}
         onDoubleClick={handleDoubleClick}
+        onMouseEnter={() => setIsHoveringNote(true)}
+        onMouseLeave={() => setIsHoveringNote(false)}
       >
         {/* Background image if provided */}
         {image && (
@@ -268,10 +252,6 @@ const Note: React.FC<NoteProps> = ({
             style={{
               backgroundImage: `url(${image})`,
               borderRadius: `${radius}px`,
-              left: `${margin}px`,
-              top: `${margin}px`,
-              width: `calc(100% - ${margin * 2}px)`,
-              height: `calc(100% - ${margin * 2}px)`,
             }}
           />
         )}
@@ -281,11 +261,6 @@ const Note: React.FC<NoteProps> = ({
           className="w-full h-full overflow-hidden relative z-10"
           style={{
             padding: `${padding}px`,
-            position: "absolute",
-            left: `${margin}px`,
-            top: `${margin}px`,
-            width: `calc(100% - ${margin * 2}px)`,
-            height: `calc(100% - ${margin * 2}px)`,
           }}
         >
           {isEditing ? (
@@ -328,9 +303,7 @@ const Note: React.FC<NoteProps> = ({
                   style={{
                     color: color === "white" ? "gray" : "rgba(0, 0, 0, 0.6)",
                   }}
-                >
-                  Double-click to add an idea
-                </div>
+                ></div>
               ) : (
                 content
               )}
@@ -338,57 +311,25 @@ const Note: React.FC<NoteProps> = ({
           )}
         </div>
 
-        {/* Resize handles on all four corners */}
-        {/* Top-left corner */}
+        {/* Single resize handle in the bottom right corner */}
         <div
-          className="absolute w-3 h-3 cursor-nwse-resize z-10 opacity-0 hover:opacity-100 transition-opacity"
+          className={`absolute w-6 h-6 cursor-nwse-resize z-10 transition-opacity duration-200 ${
+            isHoveringNote ? "opacity-100" : "opacity-0"
+          }`}
           style={{
-            left: `${margin + 2}px`,
-            top: `${margin + 2}px`,
-            touchAction: "none",
+            bottom: `${Math.max(4, radius / 2)}px`,
+            right: `${Math.max(4, radius / 2)}px`,
           }}
-          {...createHandleProps("topLeft")}
+          {...createHandleProps()}
         >
-          <div className="w-full h-full bg-white/80 rounded-sm border border-gray-300/50"></div>
-        </div>
-
-        {/* Top-right corner */}
-        <div
-          className="absolute w-3 h-3 cursor-nesw-resize z-10 opacity-0 hover:opacity-100 transition-opacity"
-          style={{
-            right: `${margin + 2}px`,
-            top: `${margin + 2}px`,
-            touchAction: "none",
-          }}
-          {...createHandleProps("topRight")}
-        >
-          <div className="w-full h-full bg-white/80 rounded-sm border border-gray-300/50"></div>
-        </div>
-
-        {/* Bottom-left corner */}
-        <div
-          className="absolute w-3 h-3 cursor-nesw-resize z-10 opacity-0 hover:opacity-100 transition-opacity"
-          style={{
-            left: `${margin + 2}px`,
-            bottom: `${margin + 2}px`,
-            touchAction: "none",
-          }}
-          {...createHandleProps("bottomLeft")}
-        >
-          <div className="w-full h-full bg-white/80 rounded-sm border border-gray-300/50"></div>
-        </div>
-
-        {/* Bottom-right corner */}
-        <div
-          className="absolute w-3 h-3 cursor-nwse-resize z-10 opacity-0 hover:opacity-100 transition-opacity"
-          style={{
-            right: `${margin + 2}px`,
-            bottom: `${margin + 2}px`,
-            touchAction: "none",
-          }}
-          {...createHandleProps("bottomRight")}
-        >
-          <div className="w-full h-full bg-white/80 rounded-sm border border-gray-300/50"></div>
+          <svg
+            className="w-full h-full opacity-50"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            style={{ color: color && color !== "white" ? "black" : "black" }}
+          >
+            <path d="M22,22H20V20H22V22M22,18H20V16H22V18M18,22H16V20H18V22M18,18H16V16H18V18M14,22H12V20H14V22M22,14H20V12H22V14Z" />
+          </svg>
         </div>
       </div>
 

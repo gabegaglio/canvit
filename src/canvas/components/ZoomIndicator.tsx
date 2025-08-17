@@ -40,9 +40,13 @@ const ZoomIndicator: React.FC<ZoomIndicatorProps> = ({ scale, theme }) => {
   return (
     <div className="fixed top-4 right-4 z-50 pointer-events-none">
       <div
-        className={`px-3 py-2 rounded-lg transition-all duration-500 ease-in-out backdrop-blur-2xl shadow-lg ${
+        className={`px-3 py-2 rounded-lg transition-all duration-500 ease-in-out backdrop-blur-2xl shadow-2xl border ${
           isVisible ? "opacity-100" : "opacity-0"
-        } ${isDark ? "bg-black/60 text-white" : "text-gray-900"}`}
+        } ${
+          isDark
+            ? "bg-black/80 border-gray-700 text-white"
+            : "bg-white/20 border-white/30 text-gray-900"
+        }`}
       >
         <span className="text-sm font-medium">{zoomPercentage}%</span>
       </div>

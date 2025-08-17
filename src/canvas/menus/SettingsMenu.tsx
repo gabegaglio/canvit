@@ -7,36 +7,34 @@ interface SettingsMenuProps {
   showLogo: boolean;
   onLogoToggle: () => void;
   elementRadius: number;
-  elementMargin: number;
-  gridDensity: number;
+  noteMargin: number;
+  imageMargin: number;
   onElementRadiusChange: (radius: number) => void;
-  onElementMarginChange: (margin: number) => void;
-  onGridDensityChange: (density: number) => void;
-  onResetTheme: () => void;
-  onResetLogo: () => void;
+  onNoteMarginChange: (margin: number) => void;
+  onImageMarginChange: (margin: number) => void;
+  onResetSettings: () => void;
 }
 
 const SettingsMenu: React.FC<SettingsMenuProps> = ({
   closeSettings,
   theme,
   onThemeToggle,
-  onLogoToggle,
   showLogo,
+  onLogoToggle,
   elementRadius,
-  elementMargin,
-  gridDensity,
+  noteMargin,
+  imageMargin,
   onElementRadiusChange,
-  onElementMarginChange,
-  onGridDensityChange,
-  onResetTheme,
-  onResetLogo,
+  onNoteMarginChange,
+  onImageMarginChange,
+  onResetSettings,
 }) => {
   const isDark = theme === "dark";
 
   return (
     <div className="fixed top-8 left-8 z-[9998]">
       <div
-        className={`backdrop-blur-2xl shadow-2xl rounded-2xl border w-[360px] overflow-hidden ${
+        className={`backdrop-blur-2xl shadow-2xl rounded-2xl border min-w-[320px] max-w-[380px] overflow-hidden ${
           isDark ? "bg-black/80 border-gray-700" : "bg-white/20 border-white/30"
         }`}
       >
@@ -174,29 +172,20 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
 
             {/* Element Radius */}
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span
-                  className={`text-sm drop-shadow-sm cursor-pointer transition-colors ${
-                    isDark
-                      ? "text-gray-300 hover:text-white"
-                      : "text-gray-800 hover:text-gray-900"
-                  }`}
-                >
-                  Radius
-                </span>
-                <span
-                  className={`text-sm font-mono ${
-                    isDark ? "text-gray-400" : "text-gray-600"
-                  }`}
-                >
-                  {elementRadius}px
-                </span>
-              </div>
+              <label
+                className={`text-sm drop-shadow-sm cursor-pointer transition-colors ${
+                  isDark
+                    ? "text-gray-300 hover:text-white"
+                    : "text-gray-800 hover:text-gray-900"
+                }`}
+              >
+                Element Radius: {elementRadius}px
+              </label>
               <input
                 type="range"
                 min="0"
                 max="50"
-                step="2"
+                step="1"
                 value={elementRadius}
                 onChange={(e) => onElementRadiusChange(Number(e.target.value))}
                 className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${
@@ -207,33 +196,24 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
               />
             </div>
 
-            {/* Element Margin */}
+            {/* Note Margin */}
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span
-                  className={`text-sm drop-shadow-sm cursor-pointer transition-colors ${
-                    isDark
-                      ? "text-gray-300 hover:text-white"
-                      : "text-gray-800 hover:text-gray-900"
-                  }`}
-                >
-                  Margin
-                </span>
-                <span
-                  className={`text-sm font-mono ${
-                    isDark ? "text-gray-400" : "text-gray-600"
-                  }`}
-                >
-                  {elementMargin}px
-                </span>
-              </div>
+              <label
+                className={`text-sm drop-shadow-sm cursor-pointer transition-colors ${
+                  isDark
+                    ? "text-gray-300 hover:text-white"
+                    : "text-gray-800 hover:text-gray-900"
+                }`}
+              >
+                Note Margin: {noteMargin}px
+              </label>
               <input
                 type="range"
                 min="0"
                 max="32"
                 step="2"
-                value={elementMargin}
-                onChange={(e) => onElementMarginChange(Number(e.target.value))}
+                value={noteMargin}
+                onChange={(e) => onNoteMarginChange(Number(e.target.value))}
                 className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${
                   isDark
                     ? "bg-gray-700 slider-thumb-dark"
@@ -242,33 +222,24 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
               />
             </div>
 
-            {/* Grid Density */}
+            {/* Image Margin */}
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span
-                  className={`text-sm drop-shadow-sm cursor-pointer transition-colors ${
-                    isDark
-                      ? "text-gray-300 hover:text-white"
-                      : "text-gray-800 hover:text-gray-900"
-                  }`}
-                >
-                  Grid Density
-                </span>
-                <span
-                  className={`text-sm font-mono ${
-                    isDark ? "text-gray-400" : "text-gray-600"
-                  }`}
-                >
-                  {gridDensity}px
-                </span>
-              </div>
+              <label
+                className={`text-sm drop-shadow-sm cursor-pointer transition-colors ${
+                  isDark
+                    ? "text-gray-300 hover:text-white"
+                    : "text-gray-800 hover:text-gray-900"
+                }`}
+              >
+                Image Margin: {imageMargin}px
+              </label>
               <input
                 type="range"
-                min="12.5"
-                max="100"
-                step="12.5"
-                value={gridDensity}
-                onChange={(e) => onGridDensityChange(Number(e.target.value))}
+                min="0"
+                max="32"
+                step="2"
+                value={imageMargin}
+                onChange={(e) => onImageMarginChange(Number(e.target.value))}
                 className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${
                   isDark
                     ? "bg-gray-700 slider-thumb-dark"
@@ -288,20 +259,14 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
           }`}
         >
           <button
-            onClick={() => {
-              onResetTheme();
-              onResetLogo();
-              onElementRadiusChange(8);
-              onElementMarginChange(0);
-              onGridDensityChange(50);
-            }}
-            className={`px-6 py-2 text-sm font-medium transition-all duration-200 cursor-pointer rounded-md ${
+            onClick={onResetSettings}
+            className={`px-4 py-2 text-sm font-medium transition-all duration-200 cursor-pointer rounded-md ${
               isDark
-                ? "bg-gray-600 text-gray-200 hover:bg-gray-500 hover:text-white"
-                : "bg-gray-300 text-gray-700 hover:bg-gray-400 hover:text-gray-800"
+                ? "bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl"
+                : "bg-red-500 hover:bg-red-600 text-white shadow-lg hover:shadow-xl"
             }`}
           >
-            Reset to Default
+            Reset
           </button>
           <button
             onClick={closeSettings}

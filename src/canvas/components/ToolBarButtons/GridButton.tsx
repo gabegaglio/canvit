@@ -5,14 +5,12 @@ const LOGO_BLUE = "#00AEEF";
 
 interface GridButtonProps {
   gridState: "off" | "lines" | "snap";
-  gridDensity?: number;
   onClick: () => void;
   theme: "light" | "dark";
 }
 
 const GridButton: React.FC<GridButtonProps> = ({
   gridState,
-  gridDensity = 50,
   onClick,
   theme,
 }) => {
@@ -20,16 +18,15 @@ const GridButton: React.FC<GridButtonProps> = ({
   const isActive = gridState !== "off";
 
   const getTitle = () => {
-    const densityText = gridDensity < 50 ? ` (${gridDensity}px)` : "";
     switch (gridState) {
       case "off":
-        return `Grid & Snap${densityText}`;
+        return "Grid & Snap";
       case "lines":
-        return `Snap Only${densityText}`;
+        return "Snap Only";
       case "snap":
-        return `No Grid${densityText}`;
+        return "No Grid";
       default:
-        return `Grid & Snap${densityText}`;
+        return "Grid & Snap";
     }
   };
 
@@ -102,9 +99,14 @@ const GridButton: React.FC<GridButtonProps> = ({
 
   return (
     <button
-      className="glass-icon-button"
+      className={`backdrop-blur-xl shadow-md w-9 h-9 rounded-md flex items-center justify-center text-lg transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:shadow-md ${
+        isDark
+          ? "bg-transparent border border-transparent hover:border-white/30 hover:bg-blue-500/20 text-white/80"
+          : "bg-transparent border border-transparent hover:border-black/30 hover:bg-blue-500/20 text-black/80"
+      }`}
       style={{
-        backgroundColor: isActive ? `${LOGO_BLUE}20` : "transparent",
+        backgroundColor: isActive ? `${LOGO_BLUE}20` : undefined,
+        borderColor: isActive ? LOGO_BLUE : undefined,
       }}
       onClick={onClick}
       title={getTitle()}

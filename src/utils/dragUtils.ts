@@ -1,4 +1,5 @@
 import { useDrag } from "@use-gesture/react";
+import { useEffect } from "react";
 
 /**
  * Creates a drag handler for moving an element
@@ -82,4 +83,31 @@ export const getCursorStyle = ({
   if (isHoveringHandle) return "nwse-resize";
   if (isDragging) return "grabbing";
   return "grab";
+};
+/**
+ * Hook to handle updating element dimensions and position from props
+ */
+export const useElementPosition = (
+  propWidth: number | undefined,
+  propHeight: number | undefined,
+  updateDimensions: (width: number, height: number) => void,
+  style: React.CSSProperties | undefined,
+  position: { x: number; y: number },
+  updatePosition: (x: number, y: number) => void
+) => {
+  // Update dimensions from props if they change
+  useEffect(() => {
+    if (propWidth && propHeight) {
+      updateDimensions(propWidth, propHeight);
+    }
+  }, [propWidth, propHeight, updateDimensions]);
+
+  // Set initial position from props
+  useEffect(() => {
+    if (style?.left && style?.top && position.x === 0 && position.y === 0) {
+      const x = style.left as number;
+      const y = style.top as number;
+      updatePosition(x, y);
+    }
+  }, [style?.left, style?.top, position.x, position.y, updatePosition]);
 };

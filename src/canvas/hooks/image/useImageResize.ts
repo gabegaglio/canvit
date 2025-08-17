@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { useDrag } from "@use-gesture/react";
 import { type ResizeHandle } from "../../types/resize";
 
-interface UseNoteResizeOptions {
+interface UseImageResizeOptions {
   id?: string;
   scale?: number;
   initialWidth?: number;
@@ -11,13 +11,10 @@ interface UseNoteResizeOptions {
   initialY?: number;
   onResize?: (id: string, width: number, height: number) => void;
   onPositionChange?: (id: string, x: number, y: number) => void;
-  content?: string;
 }
 
-// Reasonable minimum size that allows some content
-const MIN_SIZE = 80;
-// Minimum width per character for longest word calculation
-const MIN_WIDTH_PER_CHAR = 8;
+// Reasonable minimum size for images
+const MIN_SIZE = 50;
 
 interface ResizeCallbackData {
   width: number;
@@ -31,17 +28,16 @@ interface ResizeCallbackData {
   shouldSnap?: boolean;
 }
 
-export function useNoteResize({
+export function useImageResize({
   id,
   scale = 1,
-  initialWidth = 200,
-  initialHeight = 150,
+  initialWidth = 300,
+  initialHeight = 200,
   initialX = 0,
   initialY = 0,
   onResize,
   onPositionChange,
-  content = "",
-}: UseNoteResizeOptions) {
+}: UseImageResizeOptions) {
   const [dimensions, setDimensions] = useState({
     width: initialWidth,
     height: initialHeight,
@@ -52,51 +48,25 @@ export function useNoteResize({
 
   // Starting values for the current resize operation
   const startDimensions = useRef({ width: 0, height: 0 });
-  const startPosition = useRef({ x: 0, y: 0 }); // Add starting position tracking
+  const startPosition = useRef({ x: 0, y: 0 });
   // Track the latest dimensions for smooth updates
   const latestDimensions = useRef({
     width: initialWidth,
     height: initialHeight,
   });
 
-  // Calculate the minimum width based on content - only for long words
-  const calculateMinWidth = useCallback(() => {
-    if (!content) return MIN_SIZE;
+  // Store the original aspect ratio
+  const originalAspectRatio = useRef(initialWidth / initialHeight);
 
-    // Find the longest word in the content
-    const words = content.split(/\s+/);
-    const longestWord = words.reduce(
-      (longest, word) => (word.length > longest.length ? word : longest),
-      ""
-    );
+  const updateDimensions = useCallback((width: number, height: number) => {
+    // Apply minimum constraints
+    const newWidth = Math.max(width, MIN_SIZE);
+    const newHeight = Math.max(height, MIN_SIZE);
 
-    // Only apply special minimum width for long words (more than 8 chars)
-    if (longestWord.length <= 8) return MIN_SIZE;
-
-    // Calculate minimum width based on longest word length
-    const wordBasedMinWidth = Math.max(
-      MIN_SIZE,
-      longestWord.length * MIN_WIDTH_PER_CHAR + 24 // Add minimal padding
-    );
-
-    return wordBasedMinWidth;
-  }, [content]);
-
-  const updateDimensions = useCallback(
-    (width: number, height: number) => {
-      // Calculate minimum width based on content
-      const minWidth = calculateMinWidth();
-
-      // Apply minimum constraints
-      const newWidth = Math.max(width, minWidth);
-      const newHeight = Math.max(height, MIN_SIZE);
-
-      // Update state
-      setDimensions({ width: newWidth, height: newHeight });
-      latestDimensions.current = { width: newWidth, height: newHeight };
-    },
-    [calculateMinWidth]
-  );
+    // Update state
+    setDimensions({ width: newWidth, height: newHeight });
+    latestDimensions.current = { width: newWidth, height: newHeight };
+  }, []);
 
   const updatePosition = useCallback((x: number, y: number) => {
     setPosition({ x, y });
@@ -119,7 +89,7 @@ export function useNoteResize({
         // When starting a resize, capture initial values
         if (first) {
           startDimensions.current = { ...latestDimensions.current };
-          startPosition.current = { ...position }; // Capture starting position
+          startPosition.current = { ...position };
           setIsResizing(true);
           setCurrentHandle(handle);
         }
@@ -129,25 +99,29 @@ export function useNoteResize({
         const adjustedMy = my / scale;
 
         // Calculate new dimensions for bottom-right handle
-        const minWidth = calculateMinWidth();
         let newWidth = startDimensions.current.width;
         let newHeight = startDimensions.current.height;
 
-        // Resize from bottom-right: adjust width, height
+        // Calculate new width based on horizontal movement
         newWidth = Math.max(
-          minWidth,
+          MIN_SIZE,
           startDimensions.current.width + adjustedMx
         );
-        newHeight = Math.max(
-          MIN_SIZE,
-          startDimensions.current.height + adjustedMy
-        );
+
+        // Calculate height to maintain aspect ratio
+        newHeight = newWidth / originalAspectRatio.current;
+
+        // Ensure minimum height constraint
+        if (newHeight < MIN_SIZE) {
+          newHeight = MIN_SIZE;
+          newWidth = newHeight * originalAspectRatio.current;
+        }
 
         // Get grid snapping data if callback provided
         let finalWidth = newWidth;
         let finalHeight = newHeight;
-        let finalX = position.x;
-        let finalY = position.y;
+        let finalX = position.x; // Keep original position for bottom-right resize
+        let finalY = position.y; // Keep original position for bottom-right resize
 
         if (resizeCallback) {
           const callbackData = resizeCallback(

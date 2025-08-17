@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useAddNote } from "../note/useAddNote";
+import { useCanvas } from "../../../contexts/CanvasContext";
+import { getRandomIdea } from "../../../utils/ideaBank";
 
 interface CanvasPosition {
   positionX: number;
@@ -14,10 +15,7 @@ export function useCanvasHandlers(position: CanvasPosition) {
     y: number;
   } | null>(null);
 
-  // Use the hook for adding notes
-  const { addNoteToCanvas } = useAddNote({
-    onAddComplete: () => setContextMenu(null),
-  });
+  const { addNote } = useCanvas();
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -27,13 +25,24 @@ export function useCanvasHandlers(position: CanvasPosition) {
   const handleAddNoteFromContextMenu = () => {
     if (contextMenu) {
       // Convert screen coordinates to canvas coordinates
-      // The formula accounts for canvas position and scale
       const canvasX = (contextMenu.x - positionX) / scale;
       const canvasY = (contextMenu.y - positionY) / scale;
-      addNoteToCanvas({
-        x: canvasX,
-        y: canvasY,
+
+      // Ensure the note is within reasonable bounds
+      const boundedX = Math.max(0, Math.min(canvasX, 100000 - 200));
+      const boundedY = Math.max(0, Math.min(canvasY, 100000 - 150));
+
+      // Add note directly using the context
+      addNote({
+        x: boundedX,
+        y: boundedY,
+        content: getRandomIdea(),
+        width: 200,
+        height: 150,
+        color: "#f8f9fa", // Use a light gray instead of white
       });
+
+      setContextMenu(null);
     }
   };
 
@@ -46,9 +55,20 @@ export function useCanvasHandlers(position: CanvasPosition) {
     const canvasX = (viewportWidth / 2 - positionX) / scale;
     const canvasY = (viewportHeight / 2 - positionY) / scale;
 
-    addNoteToCanvas({
-      x: canvasX,
-      y: canvasY,
+    // Ensure the note is within reasonable bounds
+    const boundedX = Math.max(0, Math.min(canvasX, 100000 - 200));
+    const boundedY = Math.max(0, Math.min(canvasY, 100000 - 150));
+
+    console.log("Adding note at:", { boundedX, boundedY, positionX, positionY, scale });
+
+    // Add note directly using the context
+    addNote({
+      x: boundedX,
+      y: boundedY,
+      content: getRandomIdea(),
+      width: 200,
+      height: 150,
+      color: "#f8f9fa", // Use a light gray instead of white
     });
   };
 
