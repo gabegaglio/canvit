@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { useCanvas } from "../../contexts/CanvasContext";
 import { useCanvasPictureUpload } from "../hooks/image";
+import { useAddText } from "../hooks/text";
 
 // Canvas size constant
 const CANVAS_SIZE = 100000;
@@ -15,6 +16,9 @@ interface CanvasContextMenuProps {
   gridState: "off" | "lines" | "snap";
   onToggleGrid: (gridState: "off" | "lines" | "snap") => void;
   theme: "light" | "dark";
+  positionX: number;
+  positionY: number;
+  scale: number;
 }
 
 const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
@@ -25,10 +29,34 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
   gridState,
   onToggleGrid,
   theme,
+  positionX,
+  positionY,
+  scale,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
-  const { setPosition, setScale, scale } = useCanvas();
+  const { setPosition, setScale, addText } = useCanvas();
   const isDark = theme === "dark";
+
+  // Use our new useAddText hook for consistency with toolbar
+  const { createText } = useAddText({
+    onAddText: (textData) => {
+      addText({
+        x: textData.x,
+        y: textData.y,
+        content: textData.content,
+        width: textData.width,
+        height: textData.height,
+        color: textData.color,
+      });
+    },
+    canvasScale: scale,
+    gridSize: 20, // Default grid size
+    gridState,
+    viewportCenter: {
+      x: (x - positionX) / scale,
+      y: (y - positionY) / scale,
+    },
+  });
 
   // Use picture upload hook
   const { pictureInputRef, handlePictureClick, handlePictureChange } =
@@ -55,6 +83,13 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
     const nextState =
       gridState === "off" ? "lines" : gridState === "lines" ? "snap" : "off";
     onToggleGrid(nextState);
+    onClose();
+  };
+
+  // Add text at context menu position using the same hook as toolbar
+  const handleAddText = () => {
+    // Create text at the context menu position using our hook
+    createText();
     onClose();
   };
 
@@ -118,6 +153,23 @@ const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
           className="hidden"
           onChange={handlePictureChange}
         />
+      </button>
+
+      <button
+        className={`block w-full text-left px-3 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105 cursor-pointer relative group ${
+          isDark
+            ? "text-white hover:bg-white/20"
+            : "text-gray-900 hover:bg-white/30"
+        }`}
+        onClick={handleAddText}
+      >
+        <span className="relative">
+          Add Text
+          <span
+            className="absolute bottom-0 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ease-in-out"
+            style={{ backgroundColor: LOGO_BLUE }}
+          ></span>
+        </span>
       </button>
 
       <button

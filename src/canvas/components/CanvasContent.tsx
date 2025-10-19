@@ -1,6 +1,7 @@
 import React, { useCallback } from "react";
 import Note from "./Note";
 import Image from "./Image";
+import { Text } from "./Text";
 import { useCanvas } from "../../contexts/CanvasContext";
 
 interface CanvasContentProps {
@@ -33,16 +34,18 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
   onCloseCanvasContextMenu,
   theme,
   elementRadius,
-  noteMargin,
-  imageMargin,
 }) => {
   const {
     notes,
     images,
+    texts,
     updateNotePosition,
     updateNoteDimensions,
     updateImagePosition,
     updateImageDimensions,
+    updateTextPosition,
+    updateText,
+    updateTextDimensions,
   } = useCanvas();
 
   // Handle note drag end - memoized to avoid unnecessary recreations
@@ -67,6 +70,14 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
       updateImagePosition(id, x, y);
     },
     [updateImagePosition]
+  );
+
+  // Handle text drag end
+  const handleTextDragEnd = useCallback(
+    (id: string, x: number, y: number) => {
+      updateTextPosition(id, x, y);
+    },
+    [updateTextPosition]
   );
 
   // Handle image resize
@@ -174,7 +185,6 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
           onImageRightClick={handleImageRightClick}
           theme={theme}
           radius={elementRadius}
-          margin={imageMargin}
         />
       ))}
 
@@ -202,7 +212,28 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
           onNoteRightClick={handleNoteRightClick}
           theme={theme}
           radius={elementRadius}
-          margin={noteMargin}
+        />
+      ))}
+
+      {/* Render texts from the canvas context */}
+      {texts.map((text) => (
+        <Text
+          key={text.id}
+          id={text.id}
+          x={text.x}
+          y={text.y}
+          content={text.content}
+          width={text.width || 100}
+          height={text.height || 24}
+          color={text.color}
+          theme={theme}
+          onUpdateText={updateText}
+          onResize={updateTextDimensions}
+          onDragEnd={handleTextDragEnd}
+          scale={scale}
+          gridState={showGrid ? "lines" : showSnap ? "snap" : "off"}
+          gridSize={boxSize}
+          onTextRightClick={() => {}} // TODO: Implement text context menu
         />
       ))}
     </div>

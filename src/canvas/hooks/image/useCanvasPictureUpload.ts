@@ -87,13 +87,15 @@ export function useCanvasPictureUpload({
             finalHeight = Math.round(finalHeight);
 
             // Add an image with proper dimensions
-            addImage({
-              x: canvasX,
-              y: canvasY,
-              width: finalWidth,
-              height: finalHeight,
-              src: event.target.result,
-            });
+            if (event.target && typeof event.target.result === "string") {
+              addImage({
+                x: canvasX,
+                y: canvasY,
+                width: finalWidth,
+                height: finalHeight,
+                src: event.target.result,
+              });
+            }
 
             onClose();
           };

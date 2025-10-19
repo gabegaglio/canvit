@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import AddButton from "./ToolBarButtons/AddButton";
 import AddImageButton from "./ToolBarButtons/AddImageButton";
+import AddTextButton from "./ToolBarButtons/AddTextButton";
 import HomeButton from "./ToolBarButtons/HomeButton";
 import GridButton from "./ToolBarButtons/GridButton";
 import SettingsButton from "./ToolBarButtons/SettingsButton";
@@ -85,6 +86,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
           <div className="flex flex-row gap-2">
             {onAddNote && <AddButton onClick={onAddNote} theme={theme} />}
             <AddImageButton onClick={() => {}} theme={theme} />
+            <AddTextButton onClick={() => {}} theme={theme} />
           </div>
 
           {/* Separator */}

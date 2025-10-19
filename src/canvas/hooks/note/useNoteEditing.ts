@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useCanvas } from "../../../contexts/CanvasContext";
 
 interface UseNoteEditingProps {
@@ -7,77 +7,71 @@ interface UseNoteEditingProps {
 }
 
 export function useNoteEditing({ id, content }: UseNoteEditingProps) {
-  const { updateNote } = useCanvas();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { updateNote, setNoteEditing } = useCanvas();
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(content);
 
-  // Update editContent when content changes
-  useEffect(() => {
-    setEditContent(content);
-  }, [content]);
+  // Memoize the canvas functions to prevent unnecessary re-renders
+  const memoizedUpdateNote = useMemo(() => updateNote, [updateNote]);
+  const memoizedSetNoteEditing = useMemo(
+    () => setNoteEditing,
+    [setNoteEditing]
+  );
 
-  // Handle save on blur or enter
-  const handleSave = useCallback(() => {
+  // Start editing
+  const startEditing = useCallback(() => {
+    setEditContent(content);
+    setIsEditing(true);
     if (id) {
-      updateNote(id, editContent);
+      memoizedSetNoteEditing(id, true);
+    }
+  }, [content, id, memoizedSetNoteEditing]);
+
+  // Stop editing without saving
+  const cancelEditing = useCallback(() => {
+    setEditContent(content);
+    setIsEditing(false);
+    if (id) {
+      memoizedSetNoteEditing(id, false);
+    }
+  }, [content, id, memoizedSetNoteEditing]);
+
+  // Save and stop editing
+  const saveAndStop = useCallback(() => {
+    if (id) {
+      memoizedUpdateNote(id, editContent);
+      memoizedSetNoteEditing(id, false);
     }
     setIsEditing(false);
-  }, [id, editContent, updateNote]);
+  }, [id, editContent, memoizedUpdateNote, memoizedSetNoteEditing]);
 
-  // Handle cancel
-  const handleCancel = useCallback(() => {
-    setEditContent(content);
-    setIsEditing(false);
-  }, [content]);
-
-  // Handle keyboard events
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Escape") {
-        handleCancel();
-      } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-        handleSave();
-      }
-    },
-    [handleCancel, handleSave]
-  );
-
-  // Handle double click to start editing
-  const handleDoubleClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsEditing(true);
-      setEditContent(content);
-      // Focus the textarea after a short delay
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-          textareaRef.current.setSelectionRange(
-            textareaRef.current.value.length,
-            textareaRef.current.value.length
-          );
-        }
-      }, 10);
-    },
-    [content]
-  );
-
-  // Handle textarea click to prevent bubbling
-  const handleTextareaClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
+  // Handle content changes during editing
+  const handleContentChange = useCallback((newContent: string) => {
+    setEditContent(newContent);
   }, []);
+
+  // Handle blur (clicking away)
+  const handleBlur = useCallback(() => {
+    if (isEditing) {
+      saveAndStop();
+    }
+  }, [isEditing, saveAndStop]);
+
+  // Handle escape key
+  const handleEscape = useCallback(() => {
+    if (isEditing) {
+      cancelEditing();
+    }
+  }, [isEditing, cancelEditing]);
 
   return {
     isEditing,
     editContent,
-    setEditContent,
-    textareaRef,
-    handleSave,
-    handleCancel,
-    handleKeyDown,
-    handleDoubleClick,
-    handleTextareaClick,
+    startEditing,
+    cancelEditing,
+    saveAndStop,
+    handleContentChange,
+    handleBlur,
+    handleEscape,
   };
 }

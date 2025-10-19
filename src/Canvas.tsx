@@ -13,7 +13,14 @@ import ZoomIndicator from "./canvas/components/ZoomIndicator";
 import "./App.css";
 
 function CanvasInner() {
-  const { scale, setScale, positionX, positionY, setPosition } = useCanvas();
+  const {
+    scale,
+    setScale,
+    positionX,
+    positionY,
+    setPosition,
+    isAnyNoteEditing,
+  } = useCanvas();
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const last = useRef({ x: 0, y: 0 });
@@ -47,7 +54,8 @@ function CanvasInner() {
     positionY,
     setPosition,
     scale,
-    setScale
+    setScale,
+    isAnyNoteEditing
   );
 
   // Handle canvas click to close context menu
@@ -98,10 +106,6 @@ function CanvasInner() {
 
   // Functions to update radius and padding
   const updateNoteRadius = (radius: number) => {
-    setElementRadius(radius);
-  };
-
-  const updateImageRadius = (radius: number) => {
     setElementRadius(radius);
   };
 
@@ -190,6 +194,9 @@ function CanvasInner() {
           gridState={gridState}
           onToggleGrid={handleToggleGrid}
           theme={theme}
+          positionX={positionX}
+          positionY={positionY}
+          scale={scale}
         />
       )}
 

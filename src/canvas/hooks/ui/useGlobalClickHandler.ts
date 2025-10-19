@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 interface UseGlobalClickHandlerProps {
   isEditing: boolean;
@@ -11,6 +11,11 @@ export function useGlobalClickHandler({
 }: UseGlobalClickHandlerProps) {
   const noteRef = useRef<HTMLDivElement>(null);
 
+  // Memoize the onSave function to prevent unnecessary effect re-runs
+  const memoizedOnSave = useCallback(() => {
+    onSave();
+  }, [onSave]);
+
   // Handle global clicks to exit edit mode
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
@@ -19,17 +24,28 @@ export function useGlobalClickHandler({
         noteRef.current &&
         !noteRef.current.contains(e.target as Node)
       ) {
-        onSave();
+        // Don't save if clicking on toolbar
+        const target = e.target as HTMLElement;
+        if (target.closest(".rich-text-toolbar")) {
+          return;
+        }
+
+        memoizedOnSave();
       }
     };
 
     if (isEditing) {
-      document.addEventListener("mousedown", handleGlobalClick);
+      // Use mousedown to catch the event before drag handlers
+      document.addEventListener("mousedown", handleGlobalClick, {
+        capture: true,
+      });
       return () => {
-        document.removeEventListener("mousedown", handleGlobalClick);
+        document.removeEventListener("mousedown", handleGlobalClick, {
+          capture: true,
+        });
       };
     }
-  }, [isEditing, onSave]);
+  }, [isEditing, memoizedOnSave]);
 
   return { noteRef };
 }

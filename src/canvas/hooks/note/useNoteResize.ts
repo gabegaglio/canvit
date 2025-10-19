@@ -12,6 +12,7 @@ interface UseNoteResizeOptions {
   onResize?: (id: string, width: number, height: number) => void;
   onPositionChange?: (id: string, x: number, y: number) => void;
   content?: string;
+  isEditing?: boolean; // Add editing state to prevent size changes during editing
 }
 
 // Reasonable minimum size that allows some content
@@ -41,6 +42,7 @@ export function useNoteResize({
   onResize,
   onPositionChange,
   content = "",
+  isEditing,
 }: UseNoteResizeOptions) {
   const [dimensions, setDimensions] = useState({
     width: initialWidth,
@@ -84,6 +86,9 @@ export function useNoteResize({
 
   const updateDimensions = useCallback(
     (width: number, height: number) => {
+      // Don't update dimensions if we're editing to prevent unwanted resizing
+      if (isEditing) return;
+
       // Calculate minimum width based on content
       const minWidth = calculateMinWidth();
 
@@ -95,7 +100,7 @@ export function useNoteResize({
       setDimensions({ width: newWidth, height: newHeight });
       latestDimensions.current = { width: newWidth, height: newHeight };
     },
-    [calculateMinWidth]
+    [calculateMinWidth, isEditing]
   );
 
   const updatePosition = useCallback((x: number, y: number) => {

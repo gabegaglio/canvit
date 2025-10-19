@@ -9,7 +9,8 @@ export function useCanvasPanAndZoom(
   positionY: number,
   setPosition: (x: number, y: number) => void,
   scale: number,
-  setScale: (s: number) => void
+  setScale: (s: number) => void,
+  isAnyNoteEditing: boolean = false
 ) {
   // Drag-to-pan
   useEffect(() => {
@@ -17,7 +18,7 @@ export function useCanvasPanAndZoom(
     if (!container) return;
 
     function onMouseDown(e: MouseEvent) {
-      if (!container) return;
+      if (!container || isAnyNoteEditing) return;
       isDragging.current = true;
       last.current = { x: e.clientX, y: e.clientY };
       container.style.cursor = "grabbing";

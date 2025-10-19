@@ -96,7 +96,6 @@ export function useImageResize({
 
         // Adjust movement based on canvas scale
         const adjustedMx = mx / scale;
-        const adjustedMy = my / scale;
 
         // Calculate new dimensions for bottom-right handle
         let newWidth = startDimensions.current.width;

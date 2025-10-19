@@ -6,7 +6,7 @@ interface AddImageButtonProps {
   theme: "light" | "dark";
 }
 
-const AddImageButton: React.FC<AddImageButtonProps> = ({ onClick, theme }) => {
+const AddImageButton: React.FC<AddImageButtonProps> = ({ theme }) => {
   const isDark = theme === "dark";
   const { positionX, positionY, scale, addImage } = useCanvas();
   const imageInputRef = useRef<HTMLInputElement>(null);

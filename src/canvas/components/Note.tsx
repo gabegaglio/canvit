@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNoteResize } from "../hooks/note";
 import { useElementPosition } from "../../utils/dragUtils";
 import { useDrag } from "@use-gesture/react";
@@ -10,6 +10,14 @@ import { Portal } from "../utils/PortalHelper";
 import { useNoteEditing } from "../hooks/note";
 import { useNoteContextMenu } from "../hooks/note";
 import { useGlobalClickHandler } from "../hooks/ui";
+
+import RichTextEditor from "./RichTextEditor";
+import {
+  htmlToPlainText,
+  sanitizeHTML,
+  containsHTML,
+} from "../utils/htmlUtils";
+import { useRichTextSelection } from "../hooks/text";
 
 interface NoteProps {
   id?: string;
@@ -50,21 +58,22 @@ const Note: React.FC<NoteProps> = ({
   radius = 8,
   padding = 16,
 }) => {
-  const [isDragging, setIsDragging] = useState(false);
-
-  const [isHoveringNote, setIsHoveringNote] = useState(false);
-
-  // Use custom hooks
+  // Use the new simplified editing hook
   const {
     isEditing,
     editContent,
-    setEditContent,
-    textareaRef,
-    handleSave,
-    handleKeyDown,
-    handleDoubleClick,
-    handleTextareaClick,
+    startEditing,
+    saveAndStop,
+    handleContentChange,
+    handleBlur,
+    handleEscape,
   } = useNoteEditing({ id, content });
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [isHoveringNote, setIsHoveringNote] = useState(false);
+  const [isFormatting, setIsFormatting] = useState(false);
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const latestEditContentRef = useRef(editContent);
 
   const { contextMenu, handleRightClick, handleCloseContextMenu } =
     useNoteContextMenu({
@@ -72,7 +81,28 @@ const Note: React.FC<NoteProps> = ({
       onNoteRightClick,
     });
 
-  const { noteRef } = useGlobalClickHandler({ isEditing, onSave: handleSave });
+  const { noteRef } = useGlobalClickHandler({ isEditing, onSave: saveAndStop });
+  const { saveSelection, restoreSelection, clearSelection } =
+    useRichTextSelection({ isActive: isEditing });
+
+  useEffect(() => {
+    latestEditContentRef.current = editContent;
+  }, [editContent]);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setIsFormatting(false);
+      clearSelection();
+    }
+  }, [isEditing, clearSelection]);
+
+  useEffect(() => {
+    if (!isEditing || !editorRef.current) return;
+    const html = latestEditContentRef.current;
+    editorRef.current.innerHTML =
+      html && html.trim() !== "" && html !== "&nbsp;" ? html : "<p><br /></p>";
+    saveSelection({ immediate: true });
+  }, [isEditing, saveSelection]);
 
   // Initialize resize hook
   const {
@@ -93,6 +123,7 @@ const Note: React.FC<NoteProps> = ({
     onResize,
     onPositionChange: onDragEnd,
     content, // Pass content to calculate minimum width
+    isEditing, // Pass editing state to prevent size changes during editing
   });
 
   // Use grid snap hook
@@ -117,7 +148,7 @@ const Note: React.FC<NoteProps> = ({
     updatePosition
   );
 
-  // Set up the drag gesture for moving the note - disabled when resizing
+  // Set up the drag gesture for moving the note - disabled when resizing or editing
   const bindDrag = useDrag(
     ({ movement: [mx, my], first, last, memo, event, type }) => {
       // Don't drag if we're resizing or editing
@@ -126,7 +157,22 @@ const Note: React.FC<NoteProps> = ({
       // Skip right-click dragging (only handle left mouse button)
       if (type === "mousedown" && (event as MouseEvent).button !== 0) return;
 
+      // Don't start dragging if we're in the middle of a save operation
+      if (first && isEditing) return;
+
+      // Don't start dragging if the target is a contentEditable element
+      if (first && (event.target as HTMLElement)?.contentEditable === "true")
+        return;
+
       if (first) {
+        const nativeEvent = event as Event & {
+          preventDefault?: () => void;
+          cancelable?: boolean;
+        };
+        if (nativeEvent?.cancelable && nativeEvent.preventDefault) {
+          nativeEvent.preventDefault();
+        }
+
         setIsDragging(true);
         return {
           initialX: position.x,
@@ -147,11 +193,11 @@ const Note: React.FC<NoteProps> = ({
 
       if (last) {
         setIsDragging(false);
-        const isGridActive = gridState !== "off";
-        const finalX = isGridActive ? snapPosition.x : x;
-        const finalY = isGridActive ? snapPosition.y : y;
-        updatePosition(finalX, finalY);
-        if (id && onDragEnd) {
+      const isGridActive = gridState !== "off";
+      const finalX = isGridActive ? snapPosition.x : x;
+      const finalY = isGridActive ? snapPosition.y : y;
+      updatePosition(finalX, finalY);
+      if (id && onDragEnd) {
           onDragEnd(id, finalX, finalY);
         }
       }
@@ -160,8 +206,10 @@ const Note: React.FC<NoteProps> = ({
     },
     {
       preventDefault: true,
+      eventOptions: { passive: false },
       filterTaps: true,
       shouldSnap: gridState !== "off",
+      enabled: !isEditing && !isResizing, // Completely disable drag when editing or resizing
     }
   );
 
@@ -213,14 +261,38 @@ const Note: React.FC<NoteProps> = ({
     height: dimensions.height,
     cursor: getCursor(),
     userSelect: isEditing ? ("text" as const) : ("none" as const),
-    touchAction: "none" as const,
+    touchAction: isEditing || isFormatting ? ("auto" as const) : ("none" as const),
     position: "absolute" as const,
     backgroundColor: color || "#f8f9fa",
     zIndex: 5,
   };
 
-  // Check if content is empty
-  const isEmpty = !content || content.trim() === "";
+  // Check if content is empty (handle both plain text and HTML)
+  const isEmpty =
+    !content ||
+    (containsHTML(content)
+      ? htmlToPlainText(content).trim() === ""
+      : content.trim() === "");
+
+  // Handle double click to start editing
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startEditing();
+  };
+
+  // Handle content input changes
+  const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
+    const newContent = e.currentTarget.innerHTML;
+    handleContentChange(newContent);
+    saveSelection({ immediate: true });
+  };
+
+  const handleEditorBlur = () => {
+    setIsFormatting(false);
+    clearSelection();
+    handleBlur();
+  };
 
   return (
     <>
@@ -239,7 +311,7 @@ const Note: React.FC<NoteProps> = ({
           ...combinedStyle,
           borderRadius: `${radius}px`,
         }}
-        {...bindDrag()}
+        {...(isEditing ? {} : bindDrag())}
         onContextMenu={handleRightClick}
         onDoubleClick={handleDoubleClick}
         onMouseEnter={() => setIsHoveringNote(true)}
@@ -261,40 +333,48 @@ const Note: React.FC<NoteProps> = ({
           className="w-full h-full overflow-hidden relative z-10"
           style={{
             padding: `${padding}px`,
+            minWidth: "100%",
+            maxWidth: "100%",
+            minHeight: "100%",
+            maxHeight: "100%",
+            boxSizing: "border-box",
           }}
         >
           {isEditing ? (
-            <textarea
-              ref={textareaRef}
-              className="w-full h-full p-0 m-0 border-none outline-none resize-none bg-transparent"
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              onBlur={handleSave}
-              onKeyDown={handleKeyDown}
-              onClick={handleTextareaClick}
-              spellCheck="false"
-              autoComplete="off"
-              autoCorrect="off"
+            <div
+              contentEditable={true}
+              className="break-words outline-none w-full h-full overflow-hidden"
+              ref={editorRef}
               style={{
                 color: color && color !== "white" ? "#000000" : "black",
-                opacity: color && color !== "white" ? 0.8 : 1,
-                whiteSpace: "pre-wrap",
-                wordWrap: "break-word",
-                fontFamily: "inherit",
-                fontSize: "inherit",
-                lineHeight: "inherit",
-                userSelect: "text",
-                cursor: "text",
+                opacity: 1,
+                minHeight: "100%",
+                maxHeight: "100%",
+                resize: "none",
+                overflow: "auto",
               }}
+              onInput={handleInput}
+              onBlur={handleEditorBlur}
+              onFocus={() => saveSelection()}
+              onMouseUp={() => saveSelection()}
+              onKeyUp={() => saveSelection()}
+              onSelect={() => saveSelection()}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setIsFormatting(false);
+                  clearSelection();
+                  handleEscape();
+                }
+              }}
+              suppressContentEditableWarning={true}
             />
           ) : (
             <div
               className="break-words"
               style={{
                 color: color && color !== "white" ? "#000000" : "black",
-                opacity: color && color !== "white" ? 0.8 : 1,
-                whiteSpace: "pre-wrap",
-                wordWrap: "break-word",
+                opacity: 1,
               }}
             >
               {isEmpty ? (
@@ -304,6 +384,17 @@ const Note: React.FC<NoteProps> = ({
                     color: color === "white" ? "gray" : "rgba(0, 0, 0, 0.6)",
                   }}
                 ></div>
+              ) : // Check if content contains HTML and render appropriately
+              containsHTML(content) ? (
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeHTML(content),
+                  }}
+                  style={{
+                    color: color && color !== "white" ? "#000000" : "black",
+                    opacity: color && color !== "white" ? 0.8 : 1,
+                  }}
+                />
               ) : (
                 content
               )}
@@ -333,6 +424,26 @@ const Note: React.FC<NoteProps> = ({
         </div>
       </div>
 
+      {/* Floating Rich Text Editor */}
+      {isEditing && (
+        <Portal>
+          <RichTextEditor
+            isVisible={isEditing}
+            theme={theme}
+            editorRef={editorRef}
+            restoreSelection={restoreSelection}
+            saveSelection={saveSelection}
+            onApplyFormatting={handleContentChange}
+            onFormattingStart={() => setIsFormatting(true)}
+            onFormattingEnd={() => {
+              setIsFormatting(false);
+              // Re-save selection after formatting completes
+              saveSelection({ immediate: true });
+            }}
+          />
+        </Portal>
+      )}
+
       {/* Context menu - rendered in a portal to avoid z-index issues */}
       {contextMenu && id && (
         <Portal>
@@ -340,7 +451,7 @@ const Note: React.FC<NoteProps> = ({
             x={contextMenu.x}
             y={contextMenu.y}
             noteId={id}
-            hasImage={!!image} // Pass whether the note has an image
+            hasImage={!!image}
             onClose={handleCloseContextMenu}
             theme={theme}
           />
@@ -350,4 +461,4 @@ const Note: React.FC<NoteProps> = ({
   );
 };
 
-export default Note;
+export default React.memo(Note);
