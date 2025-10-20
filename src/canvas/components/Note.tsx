@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNoteResize } from "../hooks/note";
 import { useElementPosition } from "../../utils/dragUtils";
 import { useDrag } from "@use-gesture/react";
@@ -18,6 +18,8 @@ import {
   containsHTML,
 } from "../utils/htmlUtils";
 import { useRichTextSelection } from "../hooks/text";
+
+const EMPTY_EDITABLE_HTML = "<p><br /></p>";
 
 interface NoteProps {
   id?: string;
@@ -65,7 +67,6 @@ const Note: React.FC<NoteProps> = ({
     startEditing,
     saveAndStop,
     handleContentChange,
-    handleBlur,
     handleEscape,
   } = useNoteEditing({ id, content });
 
@@ -85,9 +86,52 @@ const Note: React.FC<NoteProps> = ({
   const { saveSelection, restoreSelection, clearSelection } =
     useRichTextSelection({ isActive: isEditing });
 
+  const escapeHtml = useCallback((value: string) => {
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }, []);
+
+  const convertPlainTextToHTML = useCallback(
+    (value: string) => {
+      const normalized = value.replace(/\r\n?/g, "\n");
+      const lines = normalized.split("\n");
+      const html = lines
+        .map((line) =>
+          line.trim().length > 0
+            ? `<p>${escapeHtml(line)}</p>`
+            : "<p><br /></p>"
+        )
+        .join("");
+      return html;
+    },
+    [escapeHtml]
+  );
+
+  const ensureEditableHTML = useCallback(
+    (value: string) => {
+      if (!value) return EMPTY_EDITABLE_HTML;
+      if (containsHTML(value)) {
+        const sanitized = sanitizeHTML(value);
+        return sanitized && sanitized.trim() !== ""
+          ? sanitized
+          : EMPTY_EDITABLE_HTML;
+      }
+      const converted = convertPlainTextToHTML(value);
+      return converted && converted.trim() !== ""
+        ? converted
+        : EMPTY_EDITABLE_HTML;
+    },
+    [convertPlainTextToHTML]
+  );
+
   useEffect(() => {
-    latestEditContentRef.current = editContent;
-  }, [editContent]);
+    const sanitized = ensureEditableHTML(editContent);
+    latestEditContentRef.current = sanitized;
+  }, [editContent, ensureEditableHTML]);
 
   useEffect(() => {
     if (!isEditing) {
@@ -98,9 +142,11 @@ const Note: React.FC<NoteProps> = ({
 
   useEffect(() => {
     if (!isEditing || !editorRef.current) return;
-    const html = latestEditContentRef.current;
-    editorRef.current.innerHTML =
-      html && html.trim() !== "" && html !== "&nbsp;" ? html : "<p><br /></p>";
+    const html =
+      latestEditContentRef.current && latestEditContentRef.current.trim() !== ""
+        ? latestEditContentRef.current
+        : EMPTY_EDITABLE_HTML;
+    editorRef.current.innerHTML = html;
     saveSelection({ immediate: true });
   }, [isEditing, saveSelection]);
 
@@ -282,16 +328,115 @@ const Note: React.FC<NoteProps> = ({
   };
 
   // Handle content input changes
-  const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
-    const newContent = e.currentTarget.innerHTML;
-    handleContentChange(newContent);
-    saveSelection({ immediate: true });
+  const serializeEditorContent = useCallback(() => {
+    if (!editorRef.current) {
+      return latestEditContentRef.current || "";
+    }
+
+    const clone = editorRef.current.cloneNode(true) as HTMLElement;
+    const wrapper = document.createElement("div");
+    const childNodes = Array.from(clone.childNodes);
+    const hasElementChildren = childNodes.some(
+      (node) =>
+        node.nodeType === Node.ELEMENT_NODE &&
+        (node as HTMLElement).tagName !== "BR"
+    );
+
+    if (!childNodes.length) {
+      return "";
+    }
+
+    childNodes.forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const raw = node.textContent?.replace(/\u00a0/g, " ") ?? "";
+        if (!raw.trim()) return;
+
+        if (hasElementChildren) {
+          // Skip stray duplicated text nodes when structured elements exist
+          return;
+        }
+
+        raw.split("\n").forEach((line) => {
+          const paragraph = document.createElement("p");
+          if (line.trim().length === 0) {
+            paragraph.innerHTML = "<br />";
+          } else {
+            paragraph.textContent = line;
+          }
+          wrapper.appendChild(paragraph);
+        });
+        return;
+      }
+
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement;
+
+        if (element.tagName === "DIV") {
+          const paragraph = document.createElement("p");
+          paragraph.innerHTML = element.innerHTML;
+          wrapper.appendChild(paragraph);
+          return;
+        }
+
+        wrapper.appendChild(element.cloneNode(true));
+      }
+    });
+
+    const html = wrapper.innerHTML
+      .replace(/(<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>)+$/gi, "")
+      .trim();
+
+    if (!html || html === "<br>" || html === "<br/>") {
+      return "";
+    }
+
+    const sanitized = sanitizeHTML(html);
+    return sanitized.trim();
+  }, []);
+
+  const readEditorContent = useCallback(() => {
+    const html = serializeEditorContent();
+    latestEditContentRef.current = html;
+    handleContentChange(html);
+    return html;
+  }, [handleContentChange, serializeEditorContent]);
+
+  const syncEditorContent = useCallback(
+    (options?: { immediate?: boolean }) => {
+      const html = readEditorContent();
+      if (options?.immediate) {
+        saveSelection({ immediate: true });
+      }
+      return html;
+    },
+    [readEditorContent, saveSelection]
+  );
+
+  const handleInput = () => {
+    syncEditorContent({ immediate: true });
   };
 
   const handleEditorBlur = () => {
+    const finalContent = readEditorContent();
     setIsFormatting(false);
     clearSelection();
-    handleBlur();
+    saveAndStop(finalContent);
+  };
+
+  const handleContainerMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!isEditing) return;
+    // Ignore interactions that originate inside the editor content
+    if (
+      editorRef.current &&
+      editorRef.current.contains(event.target as Node)
+    ) {
+      return;
+    }
+
+    setIsFormatting(false);
+    clearSelection();
+    const finalContent = readEditorContent();
+    saveAndStop(finalContent);
   };
 
   return (
@@ -311,6 +456,7 @@ const Note: React.FC<NoteProps> = ({
           ...combinedStyle,
           borderRadius: `${radius}px`,
         }}
+        onMouseDown={handleContainerMouseDown}
         {...(isEditing ? {} : bindDrag())}
         onContextMenu={handleRightClick}
         onDoubleClick={handleDoubleClick}
@@ -355,10 +501,10 @@ const Note: React.FC<NoteProps> = ({
               }}
               onInput={handleInput}
               onBlur={handleEditorBlur}
-              onFocus={() => saveSelection()}
-              onMouseUp={() => saveSelection()}
-              onKeyUp={() => saveSelection()}
-              onSelect={() => saveSelection()}
+              onFocus={() => saveSelection({ immediate: true })}
+              onMouseUp={() => saveSelection({ immediate: true })}
+              onKeyUp={() => saveSelection({ immediate: true })}
+              onSelect={() => saveSelection({ immediate: true })}
               onKeyDown={(e) => {
                 if (e.key === "Escape") {
                   e.preventDefault();
@@ -433,12 +579,11 @@ const Note: React.FC<NoteProps> = ({
             editorRef={editorRef}
             restoreSelection={restoreSelection}
             saveSelection={saveSelection}
-            onApplyFormatting={handleContentChange}
+            onApplyFormatting={() => syncEditorContent({ immediate: true })}
             onFormattingStart={() => setIsFormatting(true)}
             onFormattingEnd={() => {
               setIsFormatting(false);
-              // Re-save selection after formatting completes
-              saveSelection({ immediate: true });
+              syncEditorContent({ immediate: true });
             }}
           />
         </Portal>

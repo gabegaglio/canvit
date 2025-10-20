@@ -37,13 +37,18 @@ export function useNoteEditing({ id, content }: UseNoteEditingProps) {
   }, [content, id, memoizedSetNoteEditing]);
 
   // Save and stop editing
-  const saveAndStop = useCallback(() => {
-    if (id) {
-      memoizedUpdateNote(id, editContent);
-      memoizedSetNoteEditing(id, false);
-    }
-    setIsEditing(false);
-  }, [id, editContent, memoizedUpdateNote, memoizedSetNoteEditing]);
+  const saveAndStop = useCallback(
+    (nextContent?: string) => {
+      const finalContent = nextContent ?? editContent;
+      if (id) {
+        memoizedUpdateNote(id, finalContent);
+        memoizedSetNoteEditing(id, false);
+      }
+      setEditContent(finalContent);
+      setIsEditing(false);
+    },
+    [id, editContent, memoizedUpdateNote, memoizedSetNoteEditing]
+  );
 
   // Handle content changes during editing
   const handleContentChange = useCallback((newContent: string) => {

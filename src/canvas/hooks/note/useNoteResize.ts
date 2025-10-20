@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useDrag } from "@use-gesture/react";
 import { type ResizeHandle } from "../../types/resize";
+import { htmlToPlainText, containsHTML } from "../../utils/htmlUtils";
 
 interface UseNoteResizeOptions {
   id?: string;
@@ -65,8 +66,17 @@ export function useNoteResize({
   const calculateMinWidth = useCallback(() => {
     if (!content) return MIN_SIZE;
 
+    // Convert HTML to plain text to avoid measuring markup
+    const source = containsHTML(content)
+      ? htmlToPlainText(content)
+      : content;
+
+    if (!source) {
+      return MIN_SIZE;
+    }
+
     // Find the longest word in the content
-    const words = content.split(/\s+/);
+    const words = source.split(/\s+/);
     const longestWord = words.reduce(
       (longest, word) => (word.length > longest.length ? word : longest),
       ""

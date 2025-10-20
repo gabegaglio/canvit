@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+
+const DEFAULT_HIGHLIGHT_COLOR = "#FDE68A";
 
 interface RichTextEditorProps {
   placeholder?: string;
@@ -7,10 +9,58 @@ interface RichTextEditorProps {
   editorRef: React.RefObject<HTMLElement>;
   restoreSelection?: () => void;
   saveSelection?: (options?: { immediate?: boolean }) => void;
-  onApplyFormatting?: (html: string) => void;
+  onApplyFormatting?: () => void;
   onFormattingStart?: () => void;
   onFormattingEnd?: () => void;
 }
+
+type FormattingState = {
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  strikethrough: boolean;
+  bulletList: boolean;
+  orderedList: boolean;
+  heading: string;
+  align: "left" | "center" | "right" | "justify";
+  highlight: boolean;
+};
+
+const normalizeColor = (value: string) => value.replace(/\s+/g, "").toLowerCase();
+
+const isTransparentColor = (value: string) => {
+  const normalized = normalizeColor(value);
+  return (
+    normalized === "" ||
+    normalized === "transparent" ||
+    normalized === "rgba(0,0,0,0)" ||
+    normalized === "rgb(0,0,0,0)" ||
+    normalized === "inherit" ||
+    normalized === "initial"
+  );
+};
+
+const executeCommand = (command: string, value?: string | number): boolean => {
+  try {
+    const result = document.execCommand(command, false, value);
+    return result;
+  } catch {
+    return false;
+  }
+};
+
+const executeHighlight = (color: string): boolean => {
+  return (
+    executeCommand("hiliteColor", color) || executeCommand("backColor", color)
+  );
+};
+
+const clearHighlight = (): boolean => {
+  return (
+    executeHighlight("transparent") ||
+    executeCommand("removeFormat")
+  );
+};
 
 const RichTextEditor: React.FC<RichTextEditorProps> = ({
   isVisible,
@@ -22,94 +72,215 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   onFormattingStart,
   onFormattingEnd,
 }) => {
-  if (!isVisible) return null;
-
   const isDark = theme === "dark";
 
-  const applyFormatting = (command: string, value?: string | number) => {
+  const defaultFormatting: FormattingState = useMemo(
+    () => ({
+      bold: false,
+      italic: false,
+      underline: false,
+      strikethrough: false,
+      bulletList: false,
+      orderedList: false,
+      heading: "p",
+      align: "left",
+      highlight: false,
+    }),
+    []
+  );
+
+  const [activeFormatting, setActiveFormatting] = useState<FormattingState>(
+    defaultFormatting
+  );
+
+  const updateFormattingState = useCallback(() => {
     const target = editorRef.current;
-    if (!target) return;
-
-    onFormattingStart?.();
-
-    try {
-      target.focus();
-      restoreSelection?.();
-
-      switch (command) {
-        case "bold":
-          document.execCommand("bold", false);
-          break;
-        case "italic":
-          document.execCommand("italic", false);
-          break;
-        case "underline":
-          document.execCommand("underline", false);
-          break;
-        case "strikethrough":
-          document.execCommand("strikethrough", false);
-          break;
-        case "highlight": {
-          const highlightColor = value || "#FDE68A";
-          const highlightCommand = document.queryCommandSupported("hiliteColor")
-            ? "hiliteColor"
-            : "backColor";
-          document.execCommand(highlightCommand, false, highlightColor);
-          break;
-        }
-        case "clearHighlight": {
-          const highlightCommand = document.queryCommandSupported("hiliteColor")
-            ? "hiliteColor"
-            : "backColor";
-          document.execCommand(highlightCommand, false, "transparent");
-          break;
-        }
-        case "bulletList":
-          document.execCommand("insertUnorderedList", false);
-          break;
-        case "orderedList":
-          document.execCommand("insertOrderedList", false);
-          break;
-        case "heading":
-          document.execCommand("formatBlock", false, `<h${value}>`);
-          break;
-        case "textAlign":
-          if (value === "left") document.execCommand("justifyLeft", false);
-          else if (value === "center")
-            document.execCommand("justifyCenter", false);
-          else if (value === "right")
-            document.execCommand("justifyRight", false);
-          else if (value === "justify")
-            document.execCommand("justifyFull", false);
-          break;
-        case "clearFormat":
-          document.execCommand("removeFormat", false);
-          break;
-      }
-
-      if (onApplyFormatting) {
-        onApplyFormatting(target.innerHTML);
-      }
-      saveSelection?.({ immediate: true });
-      restoreSelection?.();
-    } finally {
-      target.focus();
-      onFormattingEnd?.();
+    if (!target) {
+      setActiveFormatting(defaultFormatting);
+      return;
     }
-  };
 
-  // Create theme-specific classes
-  const toolbarClasses = isDark
-    ? "rich-text-toolbar flex flex-wrap gap-2 p-3 rounded-lg border shadow-lg transition-colors bg-gray-800 border-gray-600 text-gray-100"
-    : "rich-text-toolbar flex flex-wrap gap-2 p-3 rounded-lg border shadow-lg transition-colors bg-white border-gray-200 text-gray-900";
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      setActiveFormatting(defaultFormatting);
+      return;
+    }
 
-  const buttonClasses = isDark
+    const range = selection.getRangeAt(0);
+    if (!target.contains(range.commonAncestorContainer)) {
+      setActiveFormatting(defaultFormatting);
+      return;
+    }
+
+    const queryState = (command: string) => {
+      try {
+        return document.queryCommandState(command);
+      } catch {
+        return false;
+      }
+    };
+
+    const queryValue = (command: string) => {
+      try {
+        return document.queryCommandValue(command);
+      } catch {
+        return "";
+      }
+    };
+
+    const align: FormattingState["align"] = queryState("justifyCenter")
+      ? "center"
+      : queryState("justifyRight")
+      ? "right"
+      : queryState("justifyFull")
+      ? "justify"
+      : "left";
+
+    const headingResult = queryValue("formatBlock");
+    const heading =
+      typeof headingResult === "string" && headingResult.length > 0
+        ? headingResult.toLowerCase()
+        : "p";
+
+    const selectionAnchor =
+      range.startContainer instanceof HTMLElement
+        ? range.startContainer
+        : range.startContainer.parentElement;
+
+    const rootBackground = window.getComputedStyle(target).backgroundColor;
+    const normalizedRootBackground = normalizeColor(rootBackground || "");
+
+    const hasHighlightAncestor = () => {
+      let current = selectionAnchor as HTMLElement | null;
+      while (current && current !== target) {
+        const background = window
+          .getComputedStyle(current)
+          .backgroundColor;
+        const normalized = normalizeColor(background || "");
+        if (
+          normalized &&
+          !isTransparentColor(normalized) &&
+          normalized !== normalizedRootBackground
+        ) {
+          return true;
+        }
+        current = current.parentElement;
+      }
+      return false;
+    };
+
+    const highlightActive = hasHighlightAncestor();
+
+    setActiveFormatting({
+      bold: queryState("bold"),
+      italic: queryState("italic"),
+      underline: queryState("underline"),
+      strikethrough: queryState("strikeThrough"),
+      bulletList: queryState("insertUnorderedList"),
+      orderedList: queryState("insertOrderedList"),
+      heading,
+      align,
+      highlight: highlightActive,
+    });
+  }, [defaultFormatting, editorRef]);
+
+  const applyFormatting = useCallback(
+    (command: string, value?: string | number) => {
+      const target = editorRef.current;
+      if (!target) return;
+
+      onFormattingStart?.();
+
+      try {
+        target.focus();
+        restoreSelection?.();
+
+        let handled = false;
+
+        switch (command) {
+          case "highlight": {
+            const color = (value as string) || DEFAULT_HIGHLIGHT_COLOR;
+            handled = executeHighlight(color);
+            break;
+          }
+          case "clearHighlight": {
+            handled = clearHighlight();
+            break;
+          }
+          case "bold":
+          case "italic":
+          case "underline":
+          case "strikethrough":
+            handled = executeCommand(
+              command === "strikethrough" ? "strikeThrough" : command
+            );
+            break;
+          case "bulletList":
+            handled = executeCommand("insertUnorderedList");
+            break;
+          case "orderedList":
+            handled = executeCommand("insertOrderedList");
+            break;
+          case "heading":
+            handled = executeCommand("formatBlock", `<h${value}>`);
+            break;
+          case "textAlign":
+            if (value === "left") handled = executeCommand("justifyLeft");
+            else if (value === "center") handled = executeCommand("justifyCenter");
+            else if (value === "right") handled = executeCommand("justifyRight");
+            else if (value === "justify") handled = executeCommand("justifyFull");
+            break;
+          case "clearFormat":
+            handled = executeCommand("removeFormat");
+            break;
+          default:
+            break;
+        }
+
+        if (handled) {
+          onApplyFormatting?.();
+          saveSelection?.({ immediate: true });
+        }
+      } finally {
+        target.focus();
+        updateFormattingState();
+        onFormattingEnd?.();
+      }
+    },
+    [editorRef, onApplyFormatting, onFormattingEnd, onFormattingStart, restoreSelection, saveSelection, updateFormattingState]
+  );
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      updateFormattingState();
+    };
+
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+    };
+  }, [updateFormattingState]);
+
+  useEffect(() => {
+    updateFormattingState();
+  }, [updateFormattingState]);
+
+  if (!isVisible) {
+    return null;
+  }
+
+  const baseButtonClasses = isDark
     ? "p-2 rounded transition-colors hover:bg-gray-700 active:bg-gray-600"
     : "p-2 rounded transition-colors hover:bg-gray-100 active:bg-gray-200";
 
-  const dividerClasses = isDark
-    ? "w-px h-8 bg-gray-600"
-    : "w-px h-8 bg-gray-300";
+  const activeButtonClasses = isDark
+    ? "bg-white/10 border border-white/30"
+    : "bg-gray-200/80 border border-gray-300";
+
+  const getButtonClasses = (isActive: boolean) =>
+    `${baseButtonClasses} ${isActive ? activeButtonClasses : ""}`;
+
+  const dividerClasses = isDark ? "w-px h-8 bg-gray-600" : "w-px h-8 bg-gray-300";
 
   return (
     <>
@@ -124,83 +295,55 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         `}
       </style>
       <div className="rich-text-editor-overlay fixed z-50 top-4 left-1/2 transform -translate-x-1/2">
-        {/* Toolbar */}
         <div
-          className={toolbarClasses}
-          style={{
-            backgroundColor: isDark ? "#1f2937" : "#ffffff",
-            borderColor: isDark ? "#4b5563" : "#e5e7eb",
-            color: isDark ? "#f9fafb" : "#111827",
-          }}
+          className={`rich-text-toolbar flex flex-wrap gap-2 p-3 rounded-lg border shadow-lg transition-colors ${
+            isDark
+              ? "bg-gray-800 border-gray-600 text-gray-100"
+              : "bg-white border-gray-200 text-gray-900"
+          }`}
           onMouseDown={(e) => {
-            // Prevent blur event from firing when clicking toolbar buttons
             e.preventDefault();
             e.stopPropagation();
           }}
         >
-          {/* Text formatting */}
           <button
             onClick={() => applyFormatting("bold")}
-            className={buttonClasses}
-            style={{
-              backgroundColor: "transparent",
-              color: isDark ? "#f9fafb" : "#111827",
-            }}
+            className={getButtonClasses(activeFormatting.bold)}
             title="Bold (Ctrl+B)"
           >
             <strong>B</strong>
           </button>
           <button
             onClick={() => applyFormatting("italic")}
-            className={buttonClasses}
-            style={{
-              backgroundColor: "transparent",
-              color: isDark ? "#f9fafb" : "#111827",
-            }}
+            className={getButtonClasses(activeFormatting.italic)}
             title="Italic (Ctrl+I)"
           >
             <em>I</em>
           </button>
           <button
             onClick={() => applyFormatting("underline")}
-            className={buttonClasses}
-            style={{
-              backgroundColor: "transparent",
-              color: isDark ? "#f9fafb" : "#111827",
-            }}
+            className={getButtonClasses(activeFormatting.underline)}
             title="Underline (Ctrl+U)"
           >
             <u>U</u>
           </button>
           <button
             onClick={() => applyFormatting("strikethrough")}
-            className={buttonClasses}
-            style={{
-              backgroundColor: "transparent",
-              color: isDark ? "#f9fafb" : "#111827",
-            }}
+            className={getButtonClasses(activeFormatting.strikethrough)}
             title="Strikethrough"
           >
             <s>S</s>
           </button>
           <button
             onClick={() => applyFormatting("highlight")}
-            className={buttonClasses}
-            style={{
-              backgroundColor: "transparent",
-              color: isDark ? "#f9fafb" : "#111827",
-            }}
+            className={getButtonClasses(activeFormatting.highlight)}
             title="Highlight"
           >
             HL
           </button>
           <button
             onClick={() => applyFormatting("clearHighlight")}
-            className={buttonClasses}
-            style={{
-              backgroundColor: "transparent",
-              color: isDark ? "#f9fafb" : "#111827",
-            }}
+            className={getButtonClasses(false)}
             title="Clear Highlight"
           >
             ✕
@@ -208,17 +351,16 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
           <div className={dividerClasses} />
 
-          {/* Lists */}
           <button
             onClick={() => applyFormatting("bulletList")}
-            className={buttonClasses}
+            className={getButtonClasses(activeFormatting.bulletList)}
             title="Bullet List"
           >
             •
           </button>
           <button
             onClick={() => applyFormatting("orderedList")}
-            className={buttonClasses}
+            className={getButtonClasses(activeFormatting.orderedList)}
             title="Numbered List"
           >
             1.
@@ -226,24 +368,23 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
           <div className={dividerClasses} />
 
-          {/* Headings */}
           <button
             onClick={() => applyFormatting("heading", 1)}
-            className={buttonClasses}
+            className={getButtonClasses(activeFormatting.heading === "h1")}
             title="Heading 1"
           >
             H1
           </button>
           <button
             onClick={() => applyFormatting("heading", 2)}
-            className={buttonClasses}
+            className={getButtonClasses(activeFormatting.heading === "h2")}
             title="Heading 2"
           >
             H2
           </button>
           <button
             onClick={() => applyFormatting("heading", 3)}
-            className={buttonClasses}
+            className={getButtonClasses(activeFormatting.heading === "h3")}
             title="Heading 3"
           >
             H3
@@ -251,31 +392,30 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
           <div className={dividerClasses} />
 
-          {/* Text alignment */}
           <button
             onClick={() => applyFormatting("textAlign", "left")}
-            className={buttonClasses}
+            className={getButtonClasses(activeFormatting.align === "left")}
             title="Left Align"
           >
             ⬅
           </button>
           <button
             onClick={() => applyFormatting("textAlign", "center")}
-            className={buttonClasses}
+            className={getButtonClasses(activeFormatting.align === "center")}
             title="Center Align"
           >
             ↔
           </button>
           <button
             onClick={() => applyFormatting("textAlign", "right")}
-            className={buttonClasses}
+            className={getButtonClasses(activeFormatting.align === "right")}
             title="Right Align"
           >
             ➡
           </button>
           <button
             onClick={() => applyFormatting("textAlign", "justify")}
-            className={buttonClasses}
+            className={getButtonClasses(activeFormatting.align === "justify")}
             title="Justify"
           >
             ⬌
@@ -283,10 +423,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
           <div className={dividerClasses} />
 
-          {/* Clear formatting */}
           <button
             onClick={() => applyFormatting("clearFormat")}
-            className={buttonClasses}
+            className={getButtonClasses(false)}
             title="Clear Formatting"
           >
             Clear
@@ -297,4 +436,4 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   );
 };
 
-export default React.memo(RichTextEditor);
+export default RichTextEditor;
