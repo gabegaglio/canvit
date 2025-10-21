@@ -6,7 +6,7 @@ interface RichTextEditorProps {
   placeholder?: string;
   isVisible: boolean;
   theme: "light" | "dark";
-  editorRef: React.RefObject<HTMLElement>;
+  editorRef: React.RefObject<HTMLElement | HTMLDivElement>;
   restoreSelection?: () => void;
   saveSelection?: (options?: { immediate?: boolean }) => void;
   onApplyFormatting?: () => void;
@@ -26,7 +26,8 @@ type FormattingState = {
   highlight: boolean;
 };
 
-const normalizeColor = (value: string) => value.replace(/\s+/g, "").toLowerCase();
+const normalizeColor = (value: string) =>
+  value.replace(/\s+/g, "").toLowerCase();
 
 const isTransparentColor = (value: string) => {
   const normalized = normalizeColor(value);
@@ -42,7 +43,7 @@ const isTransparentColor = (value: string) => {
 
 const executeCommand = (command: string, value?: string | number): boolean => {
   try {
-    const result = document.execCommand(command, false, value);
+    const result = document.execCommand(command, false, value?.toString());
     return result;
   } catch {
     return false;
@@ -56,10 +57,7 @@ const executeHighlight = (color: string): boolean => {
 };
 
 const clearHighlight = (): boolean => {
-  return (
-    executeHighlight("transparent") ||
-    executeCommand("removeFormat")
-  );
+  return executeHighlight("transparent") || executeCommand("removeFormat");
 };
 
 const RichTextEditor: React.FC<RichTextEditorProps> = ({
@@ -89,9 +87,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     []
   );
 
-  const [activeFormatting, setActiveFormatting] = useState<FormattingState>(
-    defaultFormatting
-  );
+  const [activeFormatting, setActiveFormatting] =
+    useState<FormattingState>(defaultFormatting);
 
   const updateFormattingState = useCallback(() => {
     const target = editorRef.current;
@@ -153,9 +150,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     const hasHighlightAncestor = () => {
       let current = selectionAnchor as HTMLElement | null;
       while (current && current !== target) {
-        const background = window
-          .getComputedStyle(current)
-          .backgroundColor;
+        const background = window.getComputedStyle(current).backgroundColor;
         const normalized = normalizeColor(background || "");
         if (
           normalized &&
@@ -226,9 +221,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
             break;
           case "textAlign":
             if (value === "left") handled = executeCommand("justifyLeft");
-            else if (value === "center") handled = executeCommand("justifyCenter");
-            else if (value === "right") handled = executeCommand("justifyRight");
-            else if (value === "justify") handled = executeCommand("justifyFull");
+            else if (value === "center")
+              handled = executeCommand("justifyCenter");
+            else if (value === "right")
+              handled = executeCommand("justifyRight");
+            else if (value === "justify")
+              handled = executeCommand("justifyFull");
             break;
           case "clearFormat":
             handled = executeCommand("removeFormat");
@@ -247,7 +245,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
         onFormattingEnd?.();
       }
     },
-    [editorRef, onApplyFormatting, onFormattingEnd, onFormattingStart, restoreSelection, saveSelection, updateFormattingState]
+    [
+      editorRef,
+      onApplyFormatting,
+      onFormattingEnd,
+      onFormattingStart,
+      restoreSelection,
+      saveSelection,
+      updateFormattingState,
+    ]
   );
 
   useEffect(() => {
@@ -280,7 +286,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const getButtonClasses = (isActive: boolean) =>
     `${baseButtonClasses} ${isActive ? activeButtonClasses : ""}`;
 
-  const dividerClasses = isDark ? "w-px h-8 bg-gray-600" : "w-px h-8 bg-gray-300";
+  const dividerClasses = isDark
+    ? "w-px h-8 bg-gray-600"
+    : "w-px h-8 bg-gray-300";
 
   return (
     <>

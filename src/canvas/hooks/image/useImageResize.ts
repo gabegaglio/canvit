@@ -85,7 +85,7 @@ export function useImageResize({
     }
 
     return useDrag(
-      ({ movement: [mx, my], first, active, last }) => {
+      ({ movement: [mx], first, active, last }) => {
         // When starting a resize, capture initial values
         if (first) {
           startDimensions.current = { ...latestDimensions.current };

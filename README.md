@@ -1,54 +1,101 @@
-# React + TypeScript + Vite
+# Canvit
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Live Demo:** [https://gabegaglio.github.io/canvit/](https://gabegaglio.github.io/canvit/)
 
-Currently, two official plugins are available:
+Canvit is an infinite canvas workspace for organizing thoughts, notes, and images. Pan, zoom, and arrange content freely in an unbounded 2D space.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## Expanding the ESLint configuration
+- **Infinite Canvas**: Scroll and zoom smoothly across an unbounded workspace
+- **Notes**: Create, edit, resize, and color-code sticky notes with rich text support
+- **Text Boxes**: Add standalone text elements with formatting options (bold, italic, underline, alignment)
+- **Images**: Upload and position images anywhere on the canvas
+- **Grid Snapping**: Optional grid lines and snap-to-grid for precise alignment
+- **Themes**: Light and dark mode with glassmorphic UI
+- **Context Menus**: Right-click for quick actions on canvas elements
+- **Customizable**: Adjust note radius, margins, and visual styling
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Tech Stack
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+- **React 19** + **TypeScript**
+- **Vite** for fast builds and HMR
+- **TailwindCSS 4** for styling with glassmorphic design
+- **Tiptap** for rich text editing
+- **Supabase** for authentication and data persistence
+- **Lucide React** for icons
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ and npm
+
+### Installation
+
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Development
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```bash
+npm run dev
 ```
+
+Open [http://localhost:5173](http://localhost:5173) to view the app.
+
+For device testing on your local network:
+
+```bash
+npm run dev -- --host
+```
+
+### Build
+
+```bash
+npm run build
+```
+
+Outputs to `dist/` directory. Preview the production build:
+
+```bash
+npm run preview
+```
+
+### Lint
+
+```bash
+npm run lint
+```
+
+## Project Structure
+
+```
+src/
+├── canvas/
+│   ├── components/     # Canvas UI elements (Note, Text, Image, Toolbar)
+│   ├── hooks/          # Canvas logic (pan/zoom, snapping, editing)
+│   ├── menus/          # Context menus and settings
+│   └── utils/          # Canvas utilities
+├── components/ui/      # Reusable UI primitives (shadcn-inspired)
+├── contexts/           # React contexts (Canvas, Auth)
+├── lib/                # Supabase client and utilities
+└── Canvas.tsx          # Main canvas orchestrator
+```
+
+## Usage
+
+- **Pan**: Click and drag anywhere on the canvas
+- **Zoom**: Scroll to zoom in/out
+- **Add Note**: Click the '+' button or right-click → 'Add Note'
+- **Add Text**: Click the 'T' button in the toolbar
+- **Add Image**: Click the image button and upload a file
+- **Edit**: Click any element to edit its content
+- **Resize**: Drag the bottom-right corner of notes and text boxes
+- **Context Menu**: Right-click elements for color, delete, and other options
+- **Grid**: Toggle grid lines or snap-to-grid from toolbar or context menu
+- **Settings**: Click the settings icon to customize appearance
+
+## License
+
+MIT

@@ -106,14 +106,16 @@ export function useCanvasPictureUpload({
             const canvasX = (positionX - canvasPositionX) / scale;
             const canvasY = (positionY - canvasPositionY) / scale;
 
-            addImage({
-              x: canvasX,
-              y: canvasY,
-              width: 300,
-              height: 200,
-              src: event.target.result,
-            });
-            onClose();
+            if (event.target && typeof event.target.result === "string") {
+              addImage({
+                x: canvasX,
+                y: canvasY,
+                width: 300,
+                height: 200,
+                src: event.target.result,
+              });
+              onClose();
+            }
           };
 
           if (event.target && typeof event.target.result === "string") {

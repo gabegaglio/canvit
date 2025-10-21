@@ -73,7 +73,7 @@ const Note: React.FC<NoteProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [isHoveringNote, setIsHoveringNote] = useState(false);
   const [isFormatting, setIsFormatting] = useState(false);
-  const editorRef = useRef<HTMLDivElement | null>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
   const latestEditContentRef = useRef(editContent);
 
   const { contextMenu, handleRightClick, handleCloseContextMenu } =
@@ -239,11 +239,11 @@ const Note: React.FC<NoteProps> = ({
 
       if (last) {
         setIsDragging(false);
-      const isGridActive = gridState !== "off";
-      const finalX = isGridActive ? snapPosition.x : x;
-      const finalY = isGridActive ? snapPosition.y : y;
-      updatePosition(finalX, finalY);
-      if (id && onDragEnd) {
+        const isGridActive = gridState !== "off";
+        const finalX = isGridActive ? snapPosition.x : x;
+        const finalY = isGridActive ? snapPosition.y : y;
+        updatePosition(finalX, finalY);
+        if (id && onDragEnd) {
           onDragEnd(id, finalX, finalY);
         }
       }
@@ -307,7 +307,8 @@ const Note: React.FC<NoteProps> = ({
     height: dimensions.height,
     cursor: getCursor(),
     userSelect: isEditing ? ("text" as const) : ("none" as const),
-    touchAction: isEditing || isFormatting ? ("auto" as const) : ("none" as const),
+    touchAction:
+      isEditing || isFormatting ? ("auto" as const) : ("none" as const),
     position: "absolute" as const,
     backgroundColor: color || "#f8f9fa",
     zIndex: 5,
@@ -423,13 +424,12 @@ const Note: React.FC<NoteProps> = ({
     saveAndStop(finalContent);
   };
 
-  const handleContainerMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleContainerMouseDown = (
+    event: React.MouseEvent<HTMLDivElement>
+  ) => {
     if (!isEditing) return;
     // Ignore interactions that originate inside the editor content
-    if (
-      editorRef.current &&
-      editorRef.current.contains(event.target as Node)
-    ) {
+    if (editorRef.current && editorRef.current.contains(event.target as Node)) {
       return;
     }
 
@@ -576,7 +576,7 @@ const Note: React.FC<NoteProps> = ({
           <RichTextEditor
             isVisible={isEditing}
             theme={theme}
-            editorRef={editorRef}
+            editorRef={editorRef as React.RefObject<HTMLElement>}
             restoreSelection={restoreSelection}
             saveSelection={saveSelection}
             onApplyFormatting={() => syncEditorContent({ immediate: true })}
