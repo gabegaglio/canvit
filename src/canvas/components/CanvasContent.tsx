@@ -1,15 +1,20 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import Note from "./Note";
 import Image from "./Image";
 import { Text } from "./Text";
 import { useCanvas } from "../../contexts/CanvasContext";
+import { useViewportFilter } from "../hooks/canvas/useViewportFilter";
+
+const DEFAULT_TEXT_WIDTH = 100;
+const DEFAULT_TEXT_HEIGHT = 24;
 
 interface CanvasContentProps {
   positionX: number;
   positionY: number;
   scale: number;
   canvasSize: number;
-  boxSize: number;
+  gridSize: number;
+  logoSize?: number;
   logoSrc: string;
   showGrid?: boolean;
   showSnap?: boolean;
@@ -17,8 +22,6 @@ interface CanvasContentProps {
   onCloseCanvasContextMenu?: () => void; // Callback to close canvas context menu
   theme: "light" | "dark";
   elementRadius: number;
-  noteMargin: number;
-  imageMargin: number;
 }
 
 const CanvasContent: React.FC<CanvasContentProps> = ({
@@ -26,7 +29,8 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
   positionY,
   scale,
   canvasSize,
-  boxSize,
+  gridSize,
+  logoSize = gridSize * 3,
   logoSrc,
   showGrid = false,
   showSnap = false,
@@ -46,7 +50,32 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
     updateTextPosition,
     updateText,
     updateTextDimensions,
+    deleteText,
   } = useCanvas();
+
+  const viewport = useMemo(
+    () => ({
+      x: positionX,
+      y: positionY,
+      scale,
+    }),
+    [positionX, positionY, scale]
+  );
+
+  const visibleNotes = useViewportFilter(notes, viewport);
+  const visibleImages = useViewportFilter(images, viewport);
+
+  const sizedTexts = useMemo(
+    () =>
+      texts.map((text) => ({
+        ...text,
+        width: text.width ?? DEFAULT_TEXT_WIDTH,
+        height: text.height ?? DEFAULT_TEXT_HEIGHT,
+      })),
+    [texts]
+  );
+
+  const visibleTexts = useViewportFilter(sizedTexts, viewport);
 
   // Handle note drag end - memoized to avoid unnecessary recreations
   const handleNoteDragEnd = useCallback(
@@ -121,7 +150,7 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
               linear-gradient(to right, ${gridColor} 1px, transparent 1px),
               linear-gradient(to bottom, ${gridColor} 1px, transparent 1px)
             `,
-            backgroundSize: `${boxSize}px ${boxSize}px`,
+            backgroundSize: `${gridSize}px ${gridSize}px`,
           }}
         />
       </div>
@@ -151,8 +180,8 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
           style={{
             left: canvasSize / 2,
             top: canvasSize / 2,
-            width: boxSize * 3,
-            height: boxSize * 3,
+            width: logoSize,
+            height: logoSize,
             objectFit: "contain",
             zIndex: 1,
             pointerEvents: "none",
@@ -164,16 +193,16 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
       )}
 
       {/* Render images from the canvas context */}
-      {images.map((image) => (
+      {visibleImages.map((image) => (
         <Image
           key={image.id}
           id={image.id}
           className="absolute"
           style={{
-            left: image.x,
-            top: image.y,
             zIndex: 5,
           }}
+          x={image.x}
+          y={image.y}
           width={image.width}
           height={image.height}
           onDragEnd={handleImageDragEnd}
@@ -181,7 +210,7 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
           scale={scale}
           src={image.src}
           gridState={showGrid ? "lines" : showSnap ? "snap" : "off"}
-          gridSize={boxSize}
+          gridSize={gridSize}
           onImageRightClick={handleImageRightClick}
           theme={theme}
           radius={elementRadius}
@@ -189,16 +218,16 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
       ))}
 
       {/* Render notes from the canvas context */}
-      {notes.map((note) => (
+      {visibleNotes.map((note) => (
         <Note
           key={note.id}
           id={note.id}
           className="absolute"
           style={{
-            left: note.x,
-            top: note.y,
             zIndex: 5,
           }}
+          x={note.x}
+          y={note.y}
           width={note.width}
           height={note.height}
           onDragEnd={handleNoteDragEnd}
@@ -206,7 +235,7 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
           scale={scale}
           content={note.content}
           gridState={showGrid ? "lines" : showSnap ? "snap" : "off"}
-          gridSize={boxSize}
+          gridSize={gridSize}
           color={note.color}
           image={note.image}
           onNoteRightClick={handleNoteRightClick}
@@ -216,15 +245,15 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
       ))}
 
       {/* Render texts from the canvas context */}
-      {texts.map((text) => (
+      {visibleTexts.map((text) => (
         <Text
           key={text.id}
           id={text.id}
           x={text.x}
           y={text.y}
           content={text.content}
-          width={text.width || 100}
-          height={text.height || 24}
+          width={text.width ?? DEFAULT_TEXT_WIDTH}
+          height={text.height ?? DEFAULT_TEXT_HEIGHT}
           color={text.color}
           theme={theme}
           onUpdateText={updateText}
@@ -232,8 +261,9 @@ const CanvasContent: React.FC<CanvasContentProps> = ({
           onDragEnd={handleTextDragEnd}
           scale={scale}
           gridState={showGrid ? "lines" : showSnap ? "snap" : "off"}
-          gridSize={boxSize}
+          gridSize={gridSize}
           onTextRightClick={() => {}} // TODO: Implement text context menu
+          onDelete={deleteText}
         />
       ))}
     </div>

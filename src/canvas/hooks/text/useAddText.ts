@@ -45,8 +45,8 @@ export const useAddText = ({
         x,
         y,
         content: "",
-        width: 100, // Default width, will be adjusted by useTextSizing
-        height: 24, // Default height
+        width: 100,
+        height: 32,
         color: undefined, // Will use theme default
       };
 

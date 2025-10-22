@@ -1,69 +1,4 @@
-import { useDrag } from "@use-gesture/react";
-import { useEffect } from "react";
-
-/**
- * Creates a drag handler for moving an element
- * @param options Configuration options for the drag handler
- * @returns Drag binding
- */
-export const createDragHandler = ({
-  position,
-  scale = 1,
-  isResizing = false,
-  isHoveringHandle = false,
-  setIsDragging,
-  updatePosition,
-  onDragEnd,
-  id,
-}: {
-  position: { x: number; y: number };
-  scale?: number;
-  isResizing?: boolean;
-  isHoveringHandle?: boolean;
-  setIsDragging: (isDragging: boolean) => void;
-  updatePosition: (x: number, y: number) => void;
-  onDragEnd?: (id: string, x: number, y: number) => void;
-  id?: string;
-}) => {
-  return useDrag(
-    ({ movement: [mx, my], first, last, memo }) => {
-      // Don't drag if we're resizing or hovering over a resize handle
-      if (isResizing || isHoveringHandle) return;
-
-      if (first) {
-        setIsDragging(true);
-        return {
-          initialX: position.x,
-          initialY: position.y,
-        };
-      }
-
-      // Adjust movement based on canvas scale
-      const adjustedMx = mx / scale;
-      const adjustedMy = my / scale;
-
-      // Calculate new position
-      const x = memo.initialX + adjustedMx;
-      const y = memo.initialY + adjustedMy;
-
-      // Update position
-      updatePosition(x, y);
-
-      if (last) {
-        setIsDragging(false);
-        if (id && onDragEnd) {
-          onDragEnd(id, x, y);
-        }
-      }
-
-      return memo;
-    },
-    {
-      preventDefault: true,
-      filterTaps: true,
-    }
-  );
-};
+import { useEffect, useRef } from "react";
 
 /**
  * Determines the appropriate cursor based on the interaction state
@@ -92,8 +27,9 @@ export const useElementPosition = (
   propHeight: number | undefined,
   updateDimensions: (width: number, height: number) => void,
   style: React.CSSProperties | undefined,
-  position: { x: number; y: number },
-  updatePosition: (x: number, y: number) => void
+  _position: { x: number; y: number },
+  updatePosition: (x: number, y: number) => void,
+  initialPosition?: { x: number; y: number }
 ) => {
   // Update dimensions from props if they change
   useEffect(() => {
@@ -103,11 +39,55 @@ export const useElementPosition = (
   }, [propWidth, propHeight, updateDimensions]);
 
   // Set initial position from props
+  const initializedRef = useRef(false);
+  const lastInitialRef = useRef<{ x: number; y: number } | null>(null);
+
   useEffect(() => {
-    if (style?.left && style?.top && position.x === 0 && position.y === 0) {
-      const x = style.left as number;
-      const y = style.top as number;
-      updatePosition(x, y);
+    if (initialPosition) {
+      const prev = lastInitialRef.current;
+      if (
+        !prev ||
+        prev.x !== initialPosition.x ||
+        prev.y !== initialPosition.y
+      ) {
+        lastInitialRef.current = initialPosition;
+        initializedRef.current = true;
+        updatePosition(initialPosition.x ?? 0, initialPosition.y ?? 0);
+      }
+      return;
     }
-  }, [style?.left, style?.top, position.x, position.y, updatePosition]);
+
+    const hasLeft =
+      typeof style?.left === "number" || typeof style?.left === "string";
+    const hasTop =
+      typeof style?.top === "number" || typeof style?.top === "string";
+
+    if (!hasLeft || !hasTop) {
+      return;
+    }
+
+    const leftValue =
+      typeof style?.left === "number"
+        ? style.left
+        : parseFloat(style?.left as string);
+    const topValue =
+      typeof style?.top === "number"
+        ? style.top
+        : parseFloat(style?.top as string);
+
+    if (!Number.isFinite(leftValue) || !Number.isFinite(topValue)) {
+      return;
+    }
+
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      updatePosition(leftValue, topValue);
+    }
+  }, [
+    initialPosition?.x,
+    initialPosition?.y,
+    style?.left,
+    style?.top,
+    updatePosition,
+  ]);
 };

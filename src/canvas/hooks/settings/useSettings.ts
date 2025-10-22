@@ -33,7 +33,7 @@ export const DEFAULT_SETTINGS: Settings = {
   noteBorderStyle: "solid",
 
   // Grid settings
-  gridSize: 50,
+  gridSize: 2, // Maps to 1x scale [0.25, 0.5, 1, 2, 3, 4][2] = 1
   gridColor: "#ffffff",
   gridOpacity: 10,
 

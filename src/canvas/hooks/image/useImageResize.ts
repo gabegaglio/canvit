@@ -59,18 +59,28 @@ export function useImageResize({
   const originalAspectRatio = useRef(initialWidth / initialHeight);
 
   const updateDimensions = useCallback((width: number, height: number) => {
-    // Apply minimum constraints
     const newWidth = Math.max(width, MIN_SIZE);
     const newHeight = Math.max(height, MIN_SIZE);
 
-    // Update state
-    setDimensions({ width: newWidth, height: newHeight });
+    const { width: prevWidth, height: prevHeight } = latestDimensions.current;
+    if (
+      Math.abs(newWidth - prevWidth) < 0.5 &&
+      Math.abs(newHeight - prevHeight) < 0.5
+    ) {
+      return;
+    }
+
     latestDimensions.current = { width: newWidth, height: newHeight };
+    setDimensions({ width: newWidth, height: newHeight });
   }, []);
 
   const updatePosition = useCallback((x: number, y: number) => {
+    const { x: prevX, y: prevY } = position;
+    if (Math.abs(x - prevX) < 0.5 && Math.abs(y - prevY) < 0.5) {
+      return;
+    }
     setPosition({ x, y });
-  }, []);
+  }, [position]);
 
   const bindResize = (
     handle: ResizeHandle,
@@ -163,7 +173,13 @@ export function useImageResize({
 
         // Continuously update parent during drag for smoothness
         if (active && id) {
-          onResize?.(id, finalWidth, finalHeight);
+          const { width: lastWidth, height: lastHeight } = latestDimensions.current;
+          if (
+            Math.abs(finalWidth - lastWidth) > 0.5 ||
+            Math.abs(finalHeight - lastHeight) > 0.5
+          ) {
+            onResize?.(id, finalWidth, finalHeight);
+          }
         }
 
         // When a resize operation ends

@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNoteResize } from "../hooks/note";
 import { useElementPosition } from "../../utils/dragUtils";
 import { useDrag } from "@use-gesture/react";
@@ -21,10 +27,23 @@ import { useRichTextSelection } from "../hooks/text";
 
 const EMPTY_EDITABLE_HTML = "<p><br /></p>";
 
+const parsePosition = (value?: number | string): number => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
 interface NoteProps {
   id?: string;
   className?: string;
   style?: React.CSSProperties;
+  x?: number;
+  y?: number;
   onDragEnd?: (id: string, x: number, y: number) => void;
   onResize?: (id: string, width: number, height: number) => void;
   scale?: number; // Canvas scale factor
@@ -41,10 +60,12 @@ interface NoteProps {
   padding?: number; // Padding in pixels
 }
 
-const Note: React.FC<NoteProps> = ({
+const NoteComponent: React.FC<NoteProps> = ({
   id,
   className,
   style,
+  x: propX,
+  y: propY,
   onDragEnd,
   onResize,
   scale = 1,
@@ -60,6 +81,9 @@ const Note: React.FC<NoteProps> = ({
   radius = 8,
   padding = 16,
 }) => {
+  const initialX = propX ?? parsePosition(style?.left as number | string);
+  const initialY = propY ?? parsePosition(style?.top as number | string);
+
   // Use the new simplified editing hook
   const {
     isEditing,
@@ -164,8 +188,8 @@ const Note: React.FC<NoteProps> = ({
     scale,
     initialWidth: propWidth || 200,
     initialHeight: propHeight || 150,
-    initialX: (style?.left as number) || 0,
-    initialY: (style?.top as number) || 0,
+    initialX,
+    initialY,
     onResize,
     onPositionChange: onDragEnd,
     content, // Pass content to calculate minimum width
@@ -185,18 +209,27 @@ const Note: React.FC<NoteProps> = ({
   });
 
   // Use utility hook for position and dimension updates
+  const initialPositionMemo = useMemo(
+    () => ({ x: initialX, y: initialY }),
+    [initialX, initialY]
+  );
+
   useElementPosition(
     propWidth,
     propHeight,
     updateDimensions,
     style,
     position,
-    updatePosition
+    updatePosition,
+    initialPositionMemo
   );
 
   // Set up the drag gesture for moving the note - disabled when resizing or editing
   const bindDrag = useDrag(
     ({ movement: [mx, my], first, last, memo, event, type }) => {
+      // Stop propagation to prevent canvas pan
+      event.stopPropagation();
+
       // Don't drag if we're resizing or editing
       if (isResizing || isEditing) return;
 
@@ -251,11 +284,12 @@ const Note: React.FC<NoteProps> = ({
       return memo;
     },
     {
-      preventDefault: true,
-      eventOptions: { passive: false },
       filterTaps: true,
       shouldSnap: gridState !== "off",
       enabled: !isEditing && !isResizing, // Completely disable drag when editing or resizing
+      pointer: { touch: true, capture: true },
+      preventScroll: true,
+      eventOptions: { passive: false },
     }
   );
 
@@ -301,10 +335,11 @@ const Note: React.FC<NoteProps> = ({
   // Combined style with optional background color
   const combinedStyle = {
     ...style,
-    left: position.x,
-    top: position.y,
+    left: 0,
+    top: 0,
     width: dimensions.width,
     height: dimensions.height,
+    transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
     cursor: getCursor(),
     userSelect: isEditing ? ("text" as const) : ("none" as const),
     touchAction:
@@ -455,6 +490,7 @@ const Note: React.FC<NoteProps> = ({
         style={{
           ...combinedStyle,
           borderRadius: `${radius}px`,
+          zIndex: isDragging ? 1000 : combinedStyle.zIndex || 5,
         }}
         onMouseDown={handleContainerMouseDown}
         {...(isEditing ? {} : bindDrag())}
@@ -606,4 +642,30 @@ const Note: React.FC<NoteProps> = ({
   );
 };
 
-export default React.memo(Note);
+const areNotePropsEqual = (prev: NoteProps, next: NoteProps) => {
+  return (
+    prev.id === next.id &&
+    prev.x === next.x &&
+    prev.y === next.y &&
+    prev.width === next.width &&
+    prev.height === next.height &&
+    prev.content === next.content &&
+    prev.color === next.color &&
+    prev.image === next.image &&
+    prev.gridState === next.gridState &&
+    prev.gridSize === next.gridSize &&
+    prev.scale === next.scale &&
+    prev.theme === next.theme &&
+    prev.radius === next.radius &&
+    prev.padding === next.padding &&
+    prev.className === next.className &&
+    (prev.style?.zIndex ?? 0) === (next.style?.zIndex ?? 0) &&
+    prev.onDragEnd === next.onDragEnd &&
+    prev.onResize === next.onResize &&
+    prev.onNoteRightClick === next.onNoteRightClick
+  );
+};
+
+const Note = React.memo(NoteComponent, areNotePropsEqual);
+
+export default Note;

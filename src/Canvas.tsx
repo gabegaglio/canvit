@@ -10,6 +10,7 @@ import canvitLogo from "./assets/canvit.svg";
 import { CANVAS_SIZE, BOX_SIZE } from "./canvas/constants";
 import DebugPanel from "./utils/DebugPanel";
 import ZoomIndicator from "./canvas/components/ZoomIndicator";
+import { useSettings } from "./canvas/hooks/settings/useSettings";
 import "./App.css";
 
 function CanvasInner() {
@@ -26,15 +27,26 @@ function CanvasInner() {
   const last = useRef({ x: 0, y: 0 });
   const [gridState, setGridState] = useState<"off" | "lines" | "snap">("off");
 
-  // Simple state for settings - start with just theme and logo
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [showLogo, setShowLogo] = useState<boolean>(true);
-  const [showSettings, setShowSettings] = useState(false);
+  const {
+    settings,
+    updateSetting,
+    resetToDefaults: resetSettingsToDefaults,
+  } = useSettings();
 
-  // New state for note/image styling
-  const [elementRadius, setElementRadius] = useState<number>(8); // Default: rounded-lg (8px) - shared for both notes and images
-  const [noteMargin, setNoteMargin] = useState<number>(0); // Default: no margin
-  const [imageMargin, setImageMargin] = useState<number>(0); // Default: no margin
+  const theme =
+    settings.theme === "dark"
+      ? "dark"
+      : settings.theme === "light"
+      ? "light"
+      : "light";
+  const showLogo = settings.showLogo;
+  const elementRadius = settings.noteRadius;
+  // Grid size is stored as slider value (0-5), convert to actual size
+  const gridSizeSlider = Math.min(5, Math.max(0, settings.gridSize ?? 2));
+  const gridScales = [0.25, 0.5, 1, 2, 3, 4];
+  const gridSize = gridScales[gridSizeSlider] * BOX_SIZE;
+
+  const [showSettings, setShowSettings] = useState(false);
 
   // Use canvas handlers for context menu and note adding
   const {
@@ -87,34 +99,26 @@ function CanvasInner() {
   // Simple theme toggle function
   const toggleTheme = () => {
     console.log("Theme toggle clicked. Current theme:", theme);
-    setTheme((prev) => {
-      const newTheme = prev === "light" ? "dark" : "light";
-      console.log("Theme changed from", prev, "to", newTheme);
-      return newTheme;
-    });
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    updateSetting("theme", nextTheme);
+    console.log("Theme changed to", nextTheme);
   };
 
   // Simple logo toggle function
   const toggleLogo = () => {
     console.log("Logo toggle clicked. Current showLogo:", showLogo);
-    setShowLogo((prev) => {
-      const newShowLogo = !prev;
-      console.log("Logo visibility changed from", prev, "to", newShowLogo);
-      return newShowLogo;
-    });
+    const nextShowLogo = !showLogo;
+    updateSetting("showLogo", nextShowLogo);
+    console.log("Logo visibility changed to", nextShowLogo);
   };
 
-  // Functions to update radius and padding
-  const updateNoteRadius = (radius: number) => {
-    setElementRadius(radius);
+  const handleElementRadiusChange = (radius: number) => {
+    updateSetting("noteRadius", radius);
   };
 
-  const updateNoteMargin = (margin: number) => {
-    setNoteMargin(margin);
-  };
-
-  const updateImageMargin = (margin: number) => {
-    setImageMargin(margin);
+  const handleGridSizeChange = (sliderValue: number) => {
+    const clamped = Math.min(5, Math.max(0, sliderValue));
+    updateSetting("gridSize", clamped);
   };
 
   // Simple settings toggle
@@ -124,11 +128,7 @@ function CanvasInner() {
 
   // Reset all settings to defaults
   const resetSettings = () => {
-    setTheme("light");
-    setShowLogo(true);
-    setElementRadius(8);
-    setNoteMargin(0);
-    setImageMargin(0);
+    resetSettingsToDefaults();
   };
 
   return (
@@ -172,7 +172,8 @@ function CanvasInner() {
           positionY={positionY}
           scale={scale}
           canvasSize={CANVAS_SIZE}
-          boxSize={BOX_SIZE}
+          gridSize={gridSize}
+          logoSize={BOX_SIZE * 3}
           logoSrc={canvitLogo}
           showGrid={gridState === "lines"}
           showSnap={gridState === "snap"}
@@ -180,8 +181,6 @@ function CanvasInner() {
           onCloseCanvasContextMenu={handleCloseContextMenu}
           theme={theme}
           elementRadius={elementRadius}
-          noteMargin={noteMargin}
-          imageMargin={imageMargin}
         />
       </div>
 
@@ -208,11 +207,9 @@ function CanvasInner() {
           showLogo={showLogo}
           onLogoToggle={toggleLogo}
           elementRadius={elementRadius}
-          noteMargin={noteMargin}
-          imageMargin={imageMargin}
-          onElementRadiusChange={updateNoteRadius}
-          onNoteMarginChange={updateNoteMargin}
-          onImageMarginChange={updateImageMargin}
+          gridSize={gridSizeSlider}
+          onElementRadiusChange={handleElementRadiusChange}
+          onGridSizeChange={handleGridSizeChange}
           onResetSettings={resetSettings}
         />
       )}

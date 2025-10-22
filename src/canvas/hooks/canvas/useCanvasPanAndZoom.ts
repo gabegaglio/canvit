@@ -19,6 +19,17 @@ export function useCanvasPanAndZoom(
 
     function onMouseDown(e: MouseEvent) {
       if (!container || isAnyNoteEditing) return;
+
+      // Don't start panning if clicking on a note, text, or image
+      const target = e.target as HTMLElement;
+      if (
+        target.closest(".note-container") ||
+        target.closest(".text-container") ||
+        target.closest(".image-container")
+      ) {
+        return;
+      }
+
       isDragging.current = true;
       last.current = { x: e.clientX, y: e.clientY };
       container.style.cursor = "grabbing";

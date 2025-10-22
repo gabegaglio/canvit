@@ -10,7 +10,7 @@ Install deps via `npm install`. `npm run dev` launches the hot-reloading canvas 
 Match the glassmorphic look from the theme overhaul: translucent layers, blurred panels, high-contrast text. Compose UIs with Tailwind utilities; encapsulate recurring layouts inside `src/components/ui/` components patterned after shadcn. When updating canvas overlays (e.g., `SnapGuide` or `ToolBarButtons`), keep DOM depth shallow and reuse motion tokens to avoid frame drops.
 
 ## Coding Style & Naming Conventions
-Write TypeScript function components with hooks. Maintain 2-space indentation, trailing commas, and single quotes. Name components `PascalCase`, hooks `useCamelCase`, utilities `camelCase`, constants `SCREAMING_CASE`. Use `clsx` for conditional classes; hoist shared Tailwind macros into helpers on third reuse. Adjust lint behavior in `eslint.config.js` only with a comment and TODO.
+Write TypeScript function components with hooks. Maintain 2-space indentation, trailing commas, and single quotes. Avoid useEffect where possible/ Name components `PascalCase`, hooks `useCamelCase`, utilities `camelCase`, constants `SCREAMING_CASE`. Use `clsx` for conditional classes; hoist shared Tailwind macros into helpers on third reuse. Adjust lint behavior in `eslint.config.js` only with a comment and TODO.
 
 ## Performance & Latency Requirements
 Deliver clean, efficient code that keeps latency low at all costs while staying fully functional. Memoize expensive selectors, keep pointer handlers pure, and debounce network calls outside render paths. Profile new canvas interactions with React DevTools; if frame time exceeds 16 ms, document mitigation or follow-up work before merge.

@@ -7,11 +7,9 @@ interface SettingsMenuProps {
   showLogo: boolean;
   onLogoToggle: () => void;
   elementRadius: number;
-  noteMargin: number;
-  imageMargin: number;
+  gridSize: number;
   onElementRadiusChange: (radius: number) => void;
-  onNoteMarginChange: (margin: number) => void;
-  onImageMarginChange: (margin: number) => void;
+  onGridSizeChange: (size: number) => void;
   onResetSettings: () => void;
 }
 
@@ -22,14 +20,18 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
   showLogo,
   onLogoToggle,
   elementRadius,
-  noteMargin,
-  imageMargin,
+  gridSize,
   onElementRadiusChange,
-  onNoteMarginChange,
-  onImageMarginChange,
+  onGridSizeChange,
   onResetSettings,
 }) => {
   const isDark = theme === "dark";
+
+  const handleSliderPointer: React.PointerEventHandler<HTMLInputElement> = (
+    event
+  ) => {
+    event.stopPropagation();
+  };
 
   return (
     <div className="fixed top-8 left-8 z-[9998]">
@@ -172,15 +174,24 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
 
             {/* Element Radius */}
             <div className="space-y-2">
-              <label
-                className={`text-sm drop-shadow-sm cursor-pointer transition-colors ${
-                  isDark
-                    ? "text-gray-300 hover:text-white"
-                    : "text-gray-800 hover:text-gray-900"
-                }`}
-              >
-                Element Radius: {elementRadius}px
-              </label>
+              <div className="flex items-center justify-between text-sm">
+                <span
+                  className={`drop-shadow-sm cursor-default ${
+                    isDark ? "text-gray-300" : "text-gray-800"
+                  }`}
+                >
+                  Element Radius
+                </span>
+                <span
+                  className={`font-mono tabular-nums text-xs px-2 py-0.5 rounded-md ${
+                    isDark
+                      ? "bg-gray-800 text-gray-100"
+                      : "bg-white/40 text-gray-800"
+                  }`}
+                >
+                  {elementRadius}px
+                </span>
+              </div>
               <input
                 type="range"
                 min="0"
@@ -188,6 +199,7 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
                 step="1"
                 value={elementRadius}
                 onChange={(e) => onElementRadiusChange(Number(e.target.value))}
+                onPointerDown={handleSliderPointer}
                 className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${
                   isDark
                     ? "bg-gray-700 slider-thumb-dark"
@@ -196,50 +208,34 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
               />
             </div>
 
-            {/* Note Margin */}
+            {/* Grid Size */}
             <div className="space-y-2">
-              <label
-                className={`text-sm drop-shadow-sm cursor-pointer transition-colors ${
-                  isDark
-                    ? "text-gray-300 hover:text-white"
-                    : "text-gray-800 hover:text-gray-900"
-                }`}
-              >
-                Note Margin: {noteMargin}px
-              </label>
+              <div className="flex items-center justify-between text-sm">
+                <span
+                  className={`drop-shadow-sm cursor-default ${
+                    isDark ? "text-gray-300" : "text-gray-800"
+                  }`}
+                >
+                  Grid Size
+                </span>
+                <span
+                  className={`font-mono tabular-nums text-xs px-2 py-0.5 rounded-md ${
+                    isDark
+                      ? "bg-gray-800 text-gray-100"
+                      : "bg-white/40 text-gray-800"
+                  }`}
+                >
+                  {[0.25, 0.5, 1, 2, 3, 4][gridSize]}x
+                </span>
+              </div>
               <input
                 type="range"
                 min="0"
-                max="32"
-                step="2"
-                value={noteMargin}
-                onChange={(e) => onNoteMarginChange(Number(e.target.value))}
-                className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${
-                  isDark
-                    ? "bg-gray-700 slider-thumb-dark"
-                    : "bg-gray-200 slider-thumb-light"
-                }`}
-              />
-            </div>
-
-            {/* Image Margin */}
-            <div className="space-y-2">
-              <label
-                className={`text-sm drop-shadow-sm cursor-pointer transition-colors ${
-                  isDark
-                    ? "text-gray-300 hover:text-white"
-                    : "text-gray-800 hover:text-gray-900"
-                }`}
-              >
-                Image Margin: {imageMargin}px
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="32"
-                step="2"
-                value={imageMargin}
-                onChange={(e) => onImageMarginChange(Number(e.target.value))}
+                max="5"
+                step="1"
+                value={gridSize}
+                onChange={(e) => onGridSizeChange(Number(e.target.value))}
+                onPointerDown={handleSliderPointer}
                 className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${
                   isDark
                     ? "bg-gray-700 slider-thumb-dark"

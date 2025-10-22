@@ -1,19 +1,30 @@
-import React, { useEffect } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useDrag } from "@use-gesture/react";
 import { useGridSnap } from "../hooks/canvas";
 import SnapGuide from "./SnapGuide";
 import { BOX_SIZE } from "../constants";
 import { useGlobalClickHandler } from "../hooks/ui";
-import { useTextEditing, useTextSizing, useTextResize } from "../hooks/text";
-import { TextInput } from "./TextInput";
+import { useRichTextSelection } from "../hooks/text";
+import {
+  containsHTML,
+  sanitizeHTML,
+  htmlToPlainText,
+} from "../utils/htmlUtils";
+import RichTextEditor from "./RichTextEditor";
 
 interface TextProps {
   id: string;
   x: number;
   y: number;
   content: string;
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
   color?: string;
   theme: "light" | "dark";
   onUpdateText: (id: string, content: string) => void;
@@ -23,9 +34,50 @@ interface TextProps {
   gridState?: "off" | "lines" | "snap";
   gridSize?: number;
   onTextRightClick?: () => void;
+  onDelete?: (id: string) => void;
 }
 
-export const Text: React.FC<TextProps> = ({
+const EMPTY_PARAGRAPH = "<p><br /></p>";
+const MIN_WIDTH = 48;
+const MIN_HEIGHT = 28;
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const convertPlainTextToHTML = (value: string) => {
+  const normalized = value.replace(/\r\n?/g, "\n");
+  const lines = normalized.split("\n");
+  const html = lines
+    .map((line) =>
+      line.trim().length > 0 ? `<p>${escapeHtml(line)}</p>` : EMPTY_PARAGRAPH
+    )
+    .join("");
+  return html;
+};
+
+const ensureEditableHTML = (value: string) => {
+  if (!value) return EMPTY_PARAGRAPH;
+  if (containsHTML(value)) {
+    const sanitized = sanitizeHTML(value);
+    return sanitized && sanitized.trim() !== "" ? sanitized : EMPTY_PARAGRAPH;
+  }
+  const converted = convertPlainTextToHTML(value);
+  return converted && converted.trim() !== "" ? converted : EMPTY_PARAGRAPH;
+};
+
+const getPlainText = (html: string) => htmlToPlainText(html).trim();
+
+const roundSize = (value: number) => Math.max(Math.round(value), 0);
+
+const appliesToolbar = (target: EventTarget | null) =>
+  target instanceof HTMLElement && target.closest(".rich-text-toolbar");
+
+const TextComponent: React.FC<TextProps> = ({
   id,
   x,
   y,
@@ -41,109 +93,156 @@ export const Text: React.FC<TextProps> = ({
   gridState = "off",
   gridSize = BOX_SIZE,
   onTextRightClick,
+  onDelete,
 }) => {
-  const [isDragging, setIsDragging] = React.useState(false);
-  const [position, setPosition] = React.useState({ x, y });
+  const [position, setPosition] = useState({ x, y });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isFormatting, setIsFormatting] = useState(false);
+  const shouldAutoEdit = useMemo(
+    () => getPlainText(content).length === 0,
+    [content]
+  );
+  const [isEditing, setIsEditing] = useState(shouldAutoEdit);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const lastCommittedRef = useRef<string>(ensureEditableHTML(content));
+  const lastMeasuredRef = useRef<{ width: number; height: number }>({
+    width: width ?? MIN_WIDTH,
+    height: height ?? MIN_HEIGHT,
+  });
+  const justDraggedRef = useRef<boolean>(false);
 
-  // Update position when props change
+  const { noteRef } = useGlobalClickHandler({
+    isEditing,
+    onSave: () => commitChanges(),
+  });
+
+  const { saveSelection, restoreSelection, clearSelection } =
+    useRichTextSelection({ isActive: isEditing });
+
+  // Track previous props to avoid fighting with drag handler
+  const prevPropsRef = useRef({ x, y });
+
   useEffect(() => {
-    setPosition({ x, y });
+    // Only update position if props actually changed (not during local dragging)
+    if (prevPropsRef.current.x !== x || prevPropsRef.current.y !== y) {
+      setPosition({ x, y });
+      prevPropsRef.current = { x, y };
+    }
   }, [x, y]);
 
-  // Ensure width is updated when content changes in canvas context
   useEffect(() => {
-    if (content && id) {
-      // Trigger the text sizing hook to recalculate width and height
-      // The useTextSizing hook will handle the actual calculation
-    }
-  }, [content, id]);
+    lastCommittedRef.current = ensureEditableHTML(content);
+  }, [content]);
 
-  // Use text editing hook
-  const {
-    isEditing,
-    content: editContent,
-    textareaRef,
-    handleDoubleClick,
-    handleSave,
-    handleKeyDown,
-    handleChange,
-    handleSelect,
-    handleBlur,
-  } = useTextEditing({
-    initialContent: content,
-    onUpdateText,
-    id,
-    autoFocus: content === "", // Auto-focus new text boxes
-  });
-
-  // Use text sizing hook for dynamic width and height
-  const { currentWidth, currentHeight } = useTextSizing({
-    content: isEditing ? editContent : content, // Use edit content when editing, regular content when displaying
-    fontFamily: "inherit",
-    fontSize: 16, // Default font size
-    onWidthChange: (newWidth) => {
-      if (id && onResize) {
-        onResize(id, newWidth, height);
-      }
-    },
-    onHeightChange: (newHeight) => {
-      if (id && onResize) {
-        onResize(id, currentWidth, newHeight);
-      }
-    },
-    padding: 32, // Increased padding to ensure no text cut-off
-    // Remove all size restrictions to allow natural sizing
-  });
-
-  // Ensure dimensions are properly synced when exiting edit mode
   useEffect(() => {
-    if (!isEditing && content && onResize && id) {
-      // When exiting edit mode, ensure both width and height are properly set
-      // Use the calculated dimensions without any artificial restrictions
-      const newWidth = Math.max(currentWidth, 1); // Minimum 1px to avoid zero width
-      const newHeight = Math.max(currentHeight, 1); // Minimum 1px to avoid zero height
+    lastMeasuredRef.current = {
+      width: width ?? MIN_WIDTH,
+      height: height ?? MIN_HEIGHT,
+    };
+  }, [width, height]);
 
-      // Always update dimensions when exiting edit mode to ensure proper sizing
-      onResize(id, newWidth, newHeight);
+  useEffect(() => {
+    if (!isEditing) {
+      clearSelection();
+      return;
     }
-  }, [isEditing, content, currentWidth, currentHeight, onResize, id]);
 
-  // Use grid snap hook
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    const html = lastCommittedRef.current || EMPTY_PARAGRAPH;
+    if (editor.innerHTML !== html) {
+      editor.innerHTML = html;
+    }
+
+    requestAnimationFrame(() => {
+      editor.focus();
+      restoreSelection();
+    });
+  }, [isEditing, clearSelection, restoreSelection, content]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    const handleSelectionChange = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) return;
+      const anchor = selection.anchorNode;
+      if (!editorRef.current || !anchor) return;
+      if (!editorRef.current.contains(anchor)) return;
+      saveSelection({ immediate: true });
+    };
+
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+    };
+  }, [isEditing, saveSelection]);
+
+  const deleteIfEmpty = useCallback(() => {
+    if (!onDelete) return;
+    onDelete(id);
+  }, [id, onDelete]);
+
+  const commitChanges = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) {
+      setIsEditing(false);
+      return;
+    }
+
+    const sanitized = sanitizeHTML(editor.innerHTML);
+    const normalized = sanitized && sanitized.trim() !== "" ? sanitized : "";
+    const plainText = getPlainText(normalized);
+
+    clearSelection();
+    setIsEditing(false);
+
+    if (plainText.length === 0) {
+      deleteIfEmpty();
+      return;
+    }
+
+    const finalHtml = ensureEditableHTML(normalized);
+
+    if (finalHtml !== lastCommittedRef.current) {
+      lastCommittedRef.current = finalHtml;
+      onUpdateText(id, finalHtml);
+    }
+  }, [clearSelection, deleteIfEmpty, id, onUpdateText]);
+
   const { snapPosition, showSnapGuide } = useGridSnap({
     x: position.x,
     y: position.y,
-    width: 0,
-    height: 0,
+    width: width ?? MIN_WIDTH,
+    height: height ?? MIN_HEIGHT,
     gridSize,
     gridState,
     isDragging,
     isResizing: false,
   });
 
-  // Use global click handler
-  const { noteRef: textRef } = useGlobalClickHandler({
-    isEditing,
-    onSave: handleSave,
-  });
-
-  // Use simplified resize hook
-  const { bindResize } = useTextResize({
-    onResize: (newWidth, newHeight) => {
-      if (id && onResize) {
-        onResize(id, newWidth, newHeight);
-      }
-    },
-    scale,
-    // Remove size constraints to allow natural resizing
-  });
-
-  // Set up drag gesture for moving text
   const bindDrag = useDrag(
-    ({ movement: [mx, my], first, last, memo }) => {
-      // Don't drag if editing
-      if (isEditing) return;
+    ({ movement: [mx, my], first, last, memo, event, type }) => {
+      // Stop propagation to prevent canvas pan
+      if (event && typeof (event as Event).stopPropagation === "function") {
+        (event as Event).stopPropagation();
+      }
+
+      if (type === "mousedown" && (event as MouseEvent).button !== 0) return;
 
       if (first) {
+        // Don't start drag if we're currently editing
+        if (isEditing) {
+          return;
+        }
+
+        // Prevent default to stop text selection during drag
+        if (event.cancelable) {
+          event.preventDefault();
+        }
+
+        justDraggedRef.current = true;
         setIsDragging(true);
         return {
           initialX: position.x,
@@ -151,129 +250,255 @@ export const Text: React.FC<TextProps> = ({
         };
       }
 
-      // Adjust movement based on canvas scale
       const adjustedMx = mx / scale;
       const adjustedMy = my / scale;
+      const xPos = memo.initialX + adjustedMx;
+      const yPos = memo.initialY + adjustedMy;
 
-      // Calculate new position
-      const x = memo.initialX + adjustedMx;
-      const y = memo.initialY + adjustedMy;
-
-      setPosition({ x, y });
+      setPosition({ x: xPos, y: yPos });
 
       if (last) {
         setIsDragging(false);
         const isGridActive = gridState !== "off";
-        const finalX = isGridActive ? snapPosition.x : x;
-        const finalY = isGridActive ? snapPosition.y : y;
+        const finalX = isGridActive ? snapPosition.x : xPos;
+        const finalY = isGridActive ? snapPosition.y : yPos;
         setPosition({ x: finalX, y: finalY });
-        if (id && onDragEnd) {
-          onDragEnd(id, finalX, finalY);
-        }
+        onDragEnd(id, finalX, finalY);
+
+        // Clear the justDragged flag after a short delay
+        setTimeout(() => {
+          justDraggedRef.current = false;
+        }, 150);
       }
 
       return memo;
     },
     {
-      preventDefault: true,
       filterTaps: true,
+      pointer: { touch: true, capture: true },
       shouldSnap: gridState !== "off",
+      enabled: !isEditing && !isFormatting,
+      preventScroll: true,
+      eventOptions: { passive: false },
     }
   );
 
-  // Handle right click
-  const handleRightClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onTextRightClick) {
-      onTextRightClick();
+  const handleDoubleClick = useCallback(
+    (event: React.MouseEvent) => {
+      // Don't enter edit mode if we just finished dragging
+      if (isDragging || justDraggedRef.current) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      setIsEditing(true);
+    },
+    [isDragging]
+  );
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (getPlainText(lastCommittedRef.current).length === 0) {
+          deleteIfEmpty();
+          return;
+        }
+        const editor = editorRef.current;
+        if (editor) {
+          editor.innerHTML = lastCommittedRef.current || EMPTY_PARAGRAPH;
+        }
+        setIsEditing(false);
+        clearSelection();
+        return;
+      }
+
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === "enter"
+      ) {
+        event.preventDefault();
+        commitChanges();
+      }
+    },
+    [clearSelection, commitChanges, deleteIfEmpty]
+  );
+
+  const handleInput = useCallback(() => {
+    saveSelection({ immediate: true });
+  }, [saveSelection]);
+
+  const handleBlur = useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      if (appliesToolbar(event.relatedTarget)) {
+        return;
+      }
+      if (isEditing) {
+        commitChanges();
+      }
+    },
+    [commitChanges, isEditing]
+  );
+
+  const handleContextMenu = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      onTextRightClick?.();
+    },
+    [onTextRightClick]
+  );
+
+  const observeSize = useCallback(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof ResizeObserver === "undefined"
+    ) {
+      return undefined;
     }
-  };
 
-  // Determine cursor based on interaction state
-  const getCursor = () => {
-    if (isEditing) return "text";
-    if (isDragging) return "grabbing";
-    return "grab";
-  };
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return undefined;
 
-  // Combined style
-  const combinedStyle = {
-    left: position.x,
-    top: position.y,
-    cursor: getCursor(),
-    userSelect: isEditing ? ("text" as const) : ("none" as const),
-    touchAction: "none" as const,
-    position: "absolute" as const,
-    color: color || (theme === "dark" ? "#ffffff" : "#000000"),
-  };
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width: rawWidth, height: rawHeight } = entry.contentRect;
+      const nextWidth = Math.max(MIN_WIDTH, roundSize(rawWidth));
+      const nextHeight = Math.max(MIN_HEIGHT, roundSize(rawHeight));
+      const last = lastMeasuredRef.current;
+
+      if (
+        Math.abs(nextWidth - last.width) > 1 ||
+        Math.abs(nextHeight - last.height) > 1
+      ) {
+        lastMeasuredRef.current = { width: nextWidth, height: nextHeight };
+        onResize(id, nextWidth, nextHeight);
+      }
+    });
+
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, [id, onResize]);
+
+  useEffect(() => {
+    const cleanup = observeSize();
+    return () => {
+      if (typeof cleanup === "function") {
+        cleanup();
+      }
+    };
+  }, [observeSize]);
+
+  const displayHtml = useMemo(
+    () => ensureEditableHTML(content),
+    [content]
+  );
+  const textColor = color || (theme === "dark" ? "#ffffff" : "#111827");
+  const focusBorderColor =
+    theme === "dark" ? "rgba(59,130,246,0.6)" : "rgba(59,130,246,0.8)";
+
+  const cursor = isEditing ? "text" : isDragging ? "grabbing" : "grab";
 
   return (
     <>
-      {/* Snap guide outline */}
       <SnapGuide
         position={snapPosition}
-        dimensions={{ width: 0, height: 0 }}
+        dimensions={lastMeasuredRef.current}
         show={showSnapGuide && gridState !== "off"}
       />
 
-      {/* Text container */}
       <div
-        ref={textRef}
-        className="text-container"
+        ref={(node) => {
+          wrapperRef.current = node;
+          (noteRef as React.MutableRefObject<HTMLDivElement | null>).current =
+            node;
+        }}
+        className="text-container absolute"
         style={{
-          ...combinedStyle,
-          margin: "4px",
+          transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
+          cursor,
+          userSelect: isEditing ? ("text" as const) : ("none" as const),
+          touchAction:
+            isEditing || isFormatting ? ("auto" as const) : ("none" as const),
+          minWidth: MIN_WIDTH,
+          minHeight: MIN_HEIGHT,
+          zIndex: isDragging ? 1000 : 5,
         }}
         {...bindDrag()}
-        onContextMenu={handleRightClick}
         onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
       >
-        {isEditing ? (
-          <TextInput
-            ref={textareaRef}
-            value={editContent}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            onSelect={handleSelect}
-            onBlur={handleBlur}
-            width={currentWidth}
-            height={currentHeight}
-            theme={theme}
-            color={color}
-            placeholder="Type here..."
-            autoFocus={content === ""}
-          />
-        ) : (
-          <div
-            className="px-2 py-1 relative"
-            style={{
-              color: color || (theme === "dark" ? "#ffffff" : "#000000"),
-              width: `${width}px`, // Use the actual width from canvas context
-              height: `${height}px`, // Use the actual height from canvas context
-              overflow: "hidden", // Hide overflow instead of visible
-              wordBreak: "keep-all", // Prevent text wrapping - text only wraps if user manually resizes
-              whiteSpace: "nowrap", // Keep text on single line
-              lineHeight: "1.4", // Increased line height for better text visibility
-              padding: "16px", // Increased padding to ensure no text cut-off
-            }}
-          >
-            {content || ""}
-
-            {/* Single resize handle - bottom-right corner */}
-            <div
-              {...bindResize()}
-              className="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize opacity-0 hover:opacity-100 transition-opacity duration-200"
-              style={{
-                backgroundColor:
-                  theme === "dark"
-                    ? "rgba(255,255,255,0.3)"
-                    : "rgba(0,0,0,0.3)",
-                borderRadius: "2px",
-              }}
-            />
-          </div>
-        )}
+        <div
+          ref={editorRef}
+          className="relative"
+          contentEditable={isEditing}
+          onInput={handleInput}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          onKeyUp={() => saveSelection({ immediate: true })}
+          onMouseUp={() => saveSelection({ immediate: true })}
+          style={{
+            display: "inline-block",
+            minWidth: MIN_WIDTH,
+            minHeight: MIN_HEIGHT,
+            color: textColor,
+            backgroundColor: "transparent",
+            border: isEditing
+              ? `1px solid ${focusBorderColor}`
+              : "1px solid transparent",
+            borderRadius: "12px",
+            padding: "10px 14px",
+            fontSize: "16px",
+            lineHeight: 1.4,
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            outline: "none",
+            transition: "border-color 0.2s ease",
+          }}
+          suppressContentEditableWarning
+          dangerouslySetInnerHTML={
+            !isEditing ? { __html: displayHtml } : undefined
+          }
+        />
       </div>
+
+      {isEditing && (
+        <RichTextEditor
+          isVisible={isEditing}
+          theme={theme}
+          editorRef={editorRef as React.RefObject<HTMLElement>}
+          restoreSelection={restoreSelection}
+          saveSelection={saveSelection}
+          onFormattingStart={() => setIsFormatting(true)}
+          onFormattingEnd={() => {
+            setIsFormatting(false);
+            saveSelection({ immediate: true });
+          }}
+          onApplyFormatting={() => saveSelection({ immediate: true })}
+        />
+      )}
     </>
   );
 };
+
+const areTextPropsEqual = (prev: TextProps, next: TextProps) => {
+  return (
+    prev.id === next.id &&
+    prev.x === next.x &&
+    prev.y === next.y &&
+    prev.width === next.width &&
+    prev.height === next.height &&
+    prev.content === next.content &&
+    prev.color === next.color &&
+    prev.theme === next.theme &&
+    prev.scale === next.scale &&
+    prev.gridState === next.gridState &&
+    prev.gridSize === next.gridSize &&
+    prev.onUpdateText === next.onUpdateText &&
+    prev.onResize === next.onResize &&
+    prev.onDragEnd === next.onDragEnd &&
+    prev.onTextRightClick === next.onTextRightClick &&
+    prev.onDelete === next.onDelete
+  );
+};
+
+export const Text = React.memo(TextComponent, areTextPropsEqual);

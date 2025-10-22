@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useImageResize } from "../hooks/image";
 import { useElementPosition } from "../../utils/dragUtils";
 import { useDrag } from "@use-gesture/react";
@@ -9,10 +9,23 @@ import { useImageContextMenu } from "../hooks/image";
 import { Portal } from "../utils/PortalHelper";
 import ImageContextMenu from "../menus/ImageContextMenu";
 
+const parsePosition = (value?: number | string): number => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
 interface ImageProps {
   id?: string;
   className?: string;
   style?: React.CSSProperties;
+  x?: number;
+  y?: number;
   onDragEnd?: (id: string, x: number, y: number) => void;
   onResize?: (id: string, width: number, height: number) => void;
   scale?: number;
@@ -27,10 +40,12 @@ interface ImageProps {
   padding?: number; // Padding in pixels
 }
 
-const Image: React.FC<ImageProps> = ({
+const ImageComponent: React.FC<ImageProps> = ({
   id,
   className,
   style,
+  x: propX,
+  y: propY,
   onDragEnd,
   onResize,
   scale = 1,
@@ -44,6 +59,9 @@ const Image: React.FC<ImageProps> = ({
   radius = 8,
   padding = 0,
 }) => {
+  const initialX = propX ?? parsePosition(style?.left as number | string);
+  const initialY = propY ?? parsePosition(style?.top as number | string);
+
   const [isDragging, setIsDragging] = useState(false);
   const [isHoveringImage, setIsHoveringImage] = useState(false);
 
@@ -68,8 +86,8 @@ const Image: React.FC<ImageProps> = ({
     scale,
     initialWidth: propWidth || 300,
     initialHeight: propHeight || 200,
-    initialX: (style?.left as number) || 0,
-    initialY: (style?.top as number) || 0,
+    initialX,
+    initialY,
     onResize,
     onPositionChange: onDragEnd,
   });
@@ -86,21 +104,34 @@ const Image: React.FC<ImageProps> = ({
     isResizing,
   });
 
+  const initialPositionMemo = useMemo(
+    () => ({ x: initialX, y: initialY }),
+    [initialX, initialY]
+  );
+
   useElementPosition(
     propWidth,
     propHeight,
     updateDimensions,
     style,
     position,
-    updatePosition
+    updatePosition,
+    initialPositionMemo
   );
 
   const bindDrag = useDrag(
     ({ movement: [mx, my], first, last, memo, event, type }) => {
+      // Stop propagation to prevent canvas pan
+      event.stopPropagation();
+
       if (isResizing) return;
       if (type === "mousedown" && (event as MouseEvent).button !== 0) return;
 
       if (first) {
+        // Prevent default to stop any unwanted behavior
+        if (event.cancelable) {
+          event.preventDefault();
+        }
         setIsDragging(true);
         return { initialX: position.x, initialY: position.y };
       }
@@ -125,9 +156,12 @@ const Image: React.FC<ImageProps> = ({
       return memo;
     },
     {
-      preventDefault: true,
       filterTaps: true,
       shouldSnap: gridState !== "off",
+      pointer: { touch: true, capture: true },
+      enabled: !isResizing,
+      preventScroll: true,
+      eventOptions: { passive: false },
     }
   );
 
@@ -169,10 +203,11 @@ const Image: React.FC<ImageProps> = ({
 
   const combinedStyle = {
     ...style,
-    left: position.x,
-    top: position.y,
+    left: 0,
+    top: 0,
     width: dimensions.width,
     height: dimensions.height,
+    transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
     cursor: getCursor(),
     userSelect: "none" as const,
     touchAction: "none" as const,
@@ -192,6 +227,7 @@ const Image: React.FC<ImageProps> = ({
           ...combinedStyle,
           borderRadius: `${radius}px`,
           padding: `${padding}px`,
+          zIndex: isDragging ? 1000 : combinedStyle.zIndex || 5,
         }}
         {...bindDrag()}
         onContextMenu={handleRightClick}
@@ -243,5 +279,29 @@ const Image: React.FC<ImageProps> = ({
     </>
   );
 };
+
+const areImagePropsEqual = (prev: ImageProps, next: ImageProps) => {
+  return (
+    prev.id === next.id &&
+    prev.x === next.x &&
+    prev.y === next.y &&
+    prev.width === next.width &&
+    prev.height === next.height &&
+    prev.src === next.src &&
+    prev.gridState === next.gridState &&
+    prev.gridSize === next.gridSize &&
+    prev.scale === next.scale &&
+    prev.theme === next.theme &&
+    prev.radius === next.radius &&
+    prev.padding === next.padding &&
+    prev.className === next.className &&
+    (prev.style?.zIndex ?? 0) === (next.style?.zIndex ?? 0) &&
+    prev.onDragEnd === next.onDragEnd &&
+    prev.onResize === next.onResize &&
+    prev.onImageRightClick === next.onImageRightClick
+  );
+};
+
+const Image = React.memo(ImageComponent, areImagePropsEqual);
 
 export default Image;
